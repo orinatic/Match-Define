@@ -22,19 +22,19 @@
   (pp "here"))
 |#
 
-(define-syntax m-let
+(define-syntax dict-let
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((values (cdr exp))
-	    (vars (map car values))
-	    (exprs (map cadr values)))
-      (pp vars)
-      (pp exprs)
+     (let* ((dict (cdr exp)))
        (pp
-       `(begin
-	   ,@(map (lambda(v e)
-		    (let ((w (make-syntactic-closure env '() v)))
-		      `(define ,v ,e)))
-		 vars exprs)))))))
+	`(begin
+	   ,@(let (
+		   ,@((map (lambda(entry)
+			     (let ((val 
+			      (make-syntactic-closure env '() (cadr entry))))
+			       `(,(car entry) ,val))))
+		  dict)))))))))
 
-(m-let '((a 1) (b 1) (c 1)))
+
+(define d 4)
+(dict-let (a d) (b cos) (c 3))
