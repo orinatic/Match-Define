@@ -33,19 +33,25 @@
 (define-syntax dict-define
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((dict (cdr exp)))
-       ;(pp
+     (let* ((dict (cadr exp)))
+       (pp env)
+       (pp dict)
+       ;(pp (eval dict (the-environment)))
+       (pp
 	`(begin
 	   ,@(map (lambda(entry)
 		(let ((val 
-		       (make-syntactic-closure env '() (cadr entry))))
-		  `(define ,(car entry) ,val)))
-		  dict))))));)
+		       (close-syntax (cadr entry) env)))
+		  `(define ,(car entry) ,(cadr entry))))
+		   dict)))))))
 (define d 4)
-(dict-define (a d) (b cos) (c 3))
+(define t_dict '((a d) (b cos) (c 3)))
+(dict-define ((a d) (b cos) (c 3)))
+(dict-define t_dict) ;-> breaks :(
 ;a -> 4
 ;b -> #[compiled-procedure 83 ("arith" #xd7) #x1a #xa5962a]
 ;c -> 3
+(eval 'd (the-environment))
 
 (define-syntax match-define
   (sc-macro-transformer
