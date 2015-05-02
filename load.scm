@@ -1,9 +1,9 @@
-;;;; File:  load.scm -- Loader for pattern matching system
+;;;; File:  load.scm -- Loader for matching system
 
 ; Pattern matcher:
 
-(load "~/Documents/6.945/Match-Define/ghelper")
-(load "~/Documents/6.945/Match-Define/matcher")
+(load "ghelper")
+(load "matcher")
 
 
 ; Term rewriting / pattern-directed invocation system:
@@ -12,8 +12,8 @@
                             ; play with memoization in the term
                             ; rewriter
 
-(load "~/Documents/6.945/Match-Define/utils")
-(load "~/Documents/6.945/Match-Define/rule-implementation")
-(load "~/Documents/6.945/Match-Define/rules")
+(load "utils")
+(load "rule-implementation")
+(load "rules")
 
-(load "~/Documents/6.945/Match-Define/pattern-operator")
+(load "pattern-operator")
