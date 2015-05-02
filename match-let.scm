@@ -48,30 +48,26 @@
 (define (*run-match* vars pattern)
   ((match:->combinators vars) pattern '() (lambda (d n) d)))
 
+(define (assign-iter todo done)
+  (if (null? todo)
+      (filter pair? done)
+      (let* ((assign (car todo))
+	     (vars (car assign))
+	     (vals (cadr assign)))
+	(if (identifier? vars)
+	    (assign-iter (cdr todo) (append done (list assign)))
+	    (assign-iter 
+	     (cdr todo)
+	     (append done (or (*run-match* vars vals)
+			      (begin (warn 'match-failed-in-let) 
+				     '()))))))))
+
+
 (define-syntax match-let
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((assigns (cadr exp))
-	    (body (cddr exp))
-	    (dict 
-	     (filter
-	      pair?
-	      (let assign-iter ((todo assigns) (done '()))
-		(if (null? todo)
-		    done
-		    (let* ((assign (car todo))
-			   (vars (car assign))
-			   (vals (cadr assign)))
-		      (if (identifier? vars)
-			  (assign-iter 
-			   (cdr todo) 
-			   (append done (list assign)))
-			  (assign-iter
-			   (cdr todo)
-			   (append done (or (*run-match* vars vals)
-					    (begin 
-					      (warn 'match-failed-in-let)
-					      '())))))))))))
+     (let* ((body (cddr exp))
+	    (dict (assign-iter (cadr exp) '())))
        `(let ( ,@(map (lambda(entry)
 			`(,(car entry) ,(cadr entry)))
 		      dict))
@@ -80,8 +76,6 @@
 		  body))) 
 	   ))))
 
-
- 
 (match-let ((((? y) (? x)) ((1 2)))
 	     (d 5))
 	   (+ d x y)) ;-> 8
@@ -119,27 +113,8 @@
 (define-syntax match-let*
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((assigns (cadr exp))
-	    (body (cddr exp))
-	    (dict 
-	     (filter
-	      pair?
-	      (let assign-iter ((todo assigns) (done '()))
-		(if (null? todo)
-		    done
-		    (let* ((assign (car todo))
-			   (vars (car assign))
-			   (vals (cadr assign)))
-		      (if (identifier? vars)
-			  (assign-iter 
-			   (cdr todo) 
-			   (append done (list assign)))
-			  (assign-iter
-			   (cdr todo)
-			   (append done (or (*run-match* vars vals)
-					    (begin 
-					      (warn 'match-failed-in-let)
-					      '())))))))))))
+     (let* ((body (cddr exp))
+	    (dict (assign-iter (cadr exp) '())))
        (pp dict)
        `(let* ( ,@(map (lambda(entry)
 			`(,(car entry) ,(cadr entry)))
@@ -149,7 +124,6 @@
 		  body))) 
 	   ))))
 
- 
 (match-let* ((((? y) (? x)) ((1 2)))
 	     (d (+ y x)))
 	    (+ d x y)) ;-> 6
@@ -158,9 +132,16 @@
 	    (((? c) (? d)) (((+ 3 x) y))))
 	   (+ c d x y)) ;-> 9
 
-(match-let ((? y) (? x)) ((1 2)) (+ x y))
-;3 
-;Success!
-(match-let ((? y) (? x)) ((1)) (+ x y))
-;failed-match 
-;Success!
+
+(define-syntax match-letrec
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let* ((body (cddr exp))
+	    (dict (assign-iter (cadr exp) '())))
+       `(letrec ( ,@(map (lambda(entry)
+			`(,(car entry) ,(cadr entry)))
+		      dict))
+	   (begin ,@(map (lambda (statement)
+		    statement)
+		  body))) 
+	   ))))
