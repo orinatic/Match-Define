@@ -1,10 +1,4 @@
 (load "~/Documents/6.945/Match-Define/load.scm")
-(define-syntax test-define
-  (syntax-rules ()
-    ((_ name val)
-     ;(let ((dict ((match->combinators names) (list vals) '() 
-     ;(lambda (d n) d))))
-       (define name val))))
 
 (define-syntax show-vars
   (sc-macro-transformer
@@ -56,26 +50,26 @@
 (define-syntax match-define
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((dict (cdr exp)))
-       (pp
-	`(begin
-	   ,@(map (lambda(entry)
-		(let ((val 
-		       (make-syntactic-closure env '() (cadr entry))))
-		  `(define ,(car entry) ,val)))
-		  dict)))))))
+     (let* ((match (cadr exp))
+	    (vals (caddr exp))
+	    (dict ((match:->combinators match)
+				       vals 
+				       '() 
+				       (lambda (d n) d))))
+       (if dict
+	   ;(pp
+	    `(begin
+	       ,@(map (lambda(entry)
+			(let ((val 
+			       (close-syntax (cadr entry) env)))
+			  `(define ,(car entry) ,val)))
+		      dict))
+	    `(pp 'failed-match)
+	    )))));)
 
-(dict-define (a 1) (b 2) (c 3))
+(match-define ((? y) (? x)) ((1 2)))
+;x->2
+;y->1
+(match-define ((? y) (? x)) ((1)))
+;failed-match
 
-(define (succeed-fn d n) `(succeed ,d)))
-
-(define dict ((match:->combinators '((? y) (? x))) '((1 2)) '()
-	     (lambda (d n) d)))
-
-
-(test-define bar 1)
-
-
-(let ((t (caar dict)))
-  (define t 1)
-  x)
