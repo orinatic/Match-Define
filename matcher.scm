@@ -17,70 +17,76 @@
 
 ;;; Primitive match procedures:
 
-(define (match:eqv pattern-constant)
+(define (match:pattern-env? pattern-env)
+  (and (pair? pattern-env)
+       (eq? (car pattern-env) 'pattern-env))) 
+
+(define (match:eqv pattern-constant pattern-env)
   (define (eqv-match data dictionary succeed)
     (and (pair? data)
-	 (eqv? (car data) pattern-constant)
-	 (succeed dictionary 1)))
+   (eqv? (car data) pattern-constant)
+   (succeed dictionary 1)))
   eqv-match)
 
-(define (match:element variable restrictions)
+(define (match:element variable restrictions pattern-env)
   (define (ok? datum)
     (every (lambda (restriction)
-	     (restriction datum))
-	   restrictions))
+       (restriction datum))
+     restrictions))
   (define (element-match data dictionary succeed)
     (and (pair? data)
-	 (ok? (car data))
-	 (let ((vcell (match:lookup variable dictionary)))
-	   (if vcell
-	       (and (equal? (match:value vcell) (car data))
-		    (succeed dictionary 1))
-	       (succeed (match:bind variable
-				    (car data)
-				    dictionary)
-			1)))))
+   (ok? (car data))
+   (let ((vcell (match:lookup variable dictionary pattern-env)))
+     (if vcell
+         (and (equal? (match:value vcell pattern-env) (car data))
+        (succeed dictionary 1))
+         (succeed (match:bind variable
+            (car data)
+            dictionary
+            pattern-env)
+      1)))))
   element-match)
 
 
 ;;; Support for the dictionary.
 
-(define (match:bind variable data-object dictionary)
+(define (match:bind variable data-object dictionary pattern-env)
   (cons (list variable data-object) dictionary))
 
-(define (match:lookup variable dictionary)
+(define (match:lookup variable dictionary pattern-env)
   (assq variable dictionary))
 
-(define (match:value vcell)
+(define (match:value vcell pattern-env)
   (cadr vcell))
-
-(define (match:segment variable)
+
+(define (match:segment variable pattern-env)
   (define (segment-match data dictionary succeed)
     (and (list? data)
-	 (let ((vcell (match:lookup variable dictionary)))
-	   (if vcell
-	       (let lp ((data data)
-			(pattern (match:value vcell))
-			(n 0))
-		 (cond ((pair? pattern)
-			(if (and (pair? data)
-				 (equal? (car data) (car pattern)))
-			    (lp (cdr data) (cdr pattern) (+ n 1))
-			    #f))
-		       ((not (null? pattern)) #f)
-		       (else (succeed dictionary n))))
-	       (let ((n (length data)))
-		 (let lp ((i 0))
-		   (if (<= i n)
-		       (or (succeed (match:bind variable
-						(list-head data i)
-						dictionary)
-				    i)
-			   (lp (+ i 1)))
-		       #f)))))))
+   (let ((vcell (match:lookup variable dictionary pattern-env)))
+     (if vcell
+         (let lp ((data data)
+      (pattern (match:value vcell pattern-env))
+      (n 0))
+     (cond ((pair? pattern)
+      (if (and (pair? data)
+         (equal? (car data) (car pattern)))
+          (lp (cdr data) (cdr pattern) (+ n 1))
+          #f))
+           ((not (null? pattern)) #f)
+           (else (succeed dictionary n))))
+         (let ((n (length data)))
+     (let lp ((i 0))
+       (if (<= i n)
+           (or (succeed (match:bind variable
+            (list-head data i)
+            dictionary
+            pattern-env)
+            i)
+         (lp (+ i 1)))
+           #f)))))))
   segment-match)
 
-(define (match:list . match-combinators)
+(define (match:list pattern-env . match-combinators)
   (define (list-match data dictionary succeed)
     (and (pair? data)
 	 (let lp ((lst (car data))
@@ -102,7 +108,7 @@
 		  (succeed dictionary 1))
 		 (else #f)))))
   list-match)
-
+
 ;;; Syntax of matching is determined here.
 
 (define (match:element? pattern)
@@ -113,51 +119,153 @@
   (and (pair? pattern)
        (eq? (car pattern) '??)))
 
-(define (match:variable-name pattern) (cadr pattern))
-(define (match:restrictions pattern) (cddr pattern))
+(define (match:variable-name pattern pattern-env) (cadr pattern))
+(define (match:restrictions pattern pattern-env) (cddr pattern))
 
 (define (match:list? pattern)
   (and (list? pattern)
        (or (null? pattern)
-	   (not (memq (car pattern) '(? ??))))))
+     (not (memq (car pattern) '(? ??))))))
 
-(define match:->combinators
-  (make-generic-operator 1 'eqv match:eqv))
+(define match:->combinator
+  (make-generic-operator 2 'eqv match:eqv))
 
-(defhandler match:->combinators
-  (lambda (pattern)
+(define (match:->combinators pattern)
+  (match:->combinator pattern (make-pattern-env '())))
+
+(defhandler match:->combinator
+  (lambda (pattern pattern-env)
     (match:element
-     (match:variable-name pattern)
-     (match:restrictions pattern)))
-  match:element?)
+     (match:variable-name pattern pattern-env)
+     (match:restrictions pattern pattern-env)
+     pattern-env))
+  match:element?
+  match:pattern-env?)
 
-(defhandler match:->combinators
-  (lambda (pattern) (match:segment (match:variable-name pattern)))
-  match:segment?)
+(defhandler match:->combinator
+  (lambda (pattern pattern-env) 
+    (match:segment (match:variable-name pattern pattern-env) pattern-env))
+  match:segment?
+  match:pattern-env?)
 
-(defhandler match:->combinators
-  (lambda (pattern)
-    (apply match:list (map match:->combinators pattern)))
-  match:list?)
+(defhandler match:->combinator
+  (lambda (pattern pattern-env)
+    (apply match:list 
+	   pattern-env 
+	   (map (lambda (p)
+		  (match:->combinator p pattern-env))
+		  pattern)))
+  match:list?
+  match:pattern-env?)
 
 (define (matcher pattern)
   (let ((match-combinator (match:->combinators pattern)))
     (lambda (datum)
       (match-combinator (list datum)
-			'()
-			(lambda (dictionary n)
-			  (and (= n 1)
-			       dictionary))))))
-
+      '()
+      (lambda (dictionary n)
+        (and (= n 1)
+             dictionary))))))
+
+(define (match:choice? pattern)
+  (and (pair? pattern)
+       (eq? (car pattern) '?:choice)))
+
+(define (match:choice pattern-env . patterns)
+  (define (choice-match data dictionary succeed)
+    (and (pair? data)
+	 (let lp ((matchers patterns))
+	   (if (pair? matchers)
+	       (let ((match 
+		      ((car matchers)
+		       data
+		       dictionary
+		       succeed)))
+		 (if match
+		     match
+		     (lp (cdr matchers))))
+	       #f))))
+  choice-match)
+
+(defhandler match:->combinator
+  (lambda (pattern pattern-env) 
+    (apply match:choice 
+	   pattern-env
+	   (map (lambda (p) 
+		  (match:->combinator p pattern-env))
+		pattern)))
+  match:choice?
+  match:pattern-env?)
+
+(define (match:pletrec? pattern)
+  (and (pair? pattern)
+       (eq? (car pattern) '?:pletrec)))
+
+(define (match:ref? pattern)
+  (and (pair? pattern)
+       (eq? (car pattern) '?:ref)))
+
+(define (make-pattern-env parent)
+  (list 'pattern-env (make-strong-eqv-hash-table) parent))
+
+(define (match:pletrec defs pattern-env)
+  (define (make-pletrec-def assoc)
+    (let* ((name (car assoc))
+	   (comp-pattern (match:->combinator (cadr assoc)
+					     pattern-env)))
+      (pp (list 'comp-pattern comp-pattern))
+      (hash-table/put! (cadr pattern-env) name comp-pattern)))
+  (pp (list 'match:pletrec defs pattern-env))
+  (for-each make-pletrec-def defs))
+
+(defhandler match:->combinator
+  (lambda (pattern pattern-env)
+    (let ((new-env (make-pattern-env pattern-env)))
+      (match:pletrec (cadr pattern) new-env)
+      (match:->combinator (caddr pattern) new-env)))
+  match:pletrec?
+  match:pattern-env?)
+
+(define (get-pattern pattern-env key)
+  (let ((value (hash-table/get (cadr pattern-env) key #f)))
+    (if value
+	value
+	(if (null? (caddr pattern-env))
+	    (lambda (!#rest args) #f)
+	    (get-pattern (caddr pattern-env) key)))))
+
+(define (match:ref name pattern-env)
+  (define (ref-match data dictionary succeed)
+    ((get-pattern pattern-env name)
+     data
+     dictionary
+     succeed))
+  ref-match)
+
+(defhandler match:->combinator
+  (lambda (pattern pattern-env)
+    (match:ref
+     (match:variable-name pattern pattern-env)
+     pattern-env))
+  match:ref?
+  match:pattern-env?)
+
 #|
 (define (report-success dict n)
   (assert (= n 1))
   `(succeed ,dict))
 
+((match:->combinators '(?:choice a b (? x) c))
+ '(z)
+ '()
+ (lambda (d n) `(succeed ,d)))
+;Value 54: (succeed ((x z))) 
+
 ((match:->combinators '(a ((? b) 2 3) 1 c))
  '((a (1 2 3) 1 c))
  '()
   report-success)
+
 ;Value: (succeed ((b 1)))
 
 ((match:->combinators '(a ((? b) 2 3) (? b) c))
@@ -190,28 +298,28 @@
  '(a (1 2 3) 1 c))
 ;Value: ((b 1))
 |#
-
+
 ;;; Nice pattern inspection procedure that will be used by the
 ;;; pattern-directed invocation system.
-
-(define (match:pattern-names pattern)
+#|
+(define (match:pattern-names pattern pattern-env)
   (let loop ((pattern pattern) (names '()))
-    (cond ((or (match:element? pattern)
-               (match:segment? pattern))
+    (cond ((or (match:element? pattern pattern-env)
+               (match:segment? pattern pattern-env))
            (let ((name
-		  (match:variable-name pattern)))
+      (match:variable-name pattern)))
              (if (memq name names)
                  names
                  (cons name names))))
           ((list? pattern)
            (let elt-loop
-	       ((elts pattern) (names names))
+         ((elts pattern) (names names))
              (if (pair? elts)
                  (elt-loop (cdr elts)
-			   (loop (car elts) names))
+         (loop (car elts) names))
                  names)))
           (else names))))
-
+|#
 #|
  (match:pattern-names '((? a) (?? b)))
  ;Value: (b a)
