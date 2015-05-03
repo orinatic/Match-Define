@@ -58,7 +58,23 @@
 (define (dict-let dict body)
   (let ((keys (dict->keys dict))
 	(vals (dict->vals dict)))
-    (lambda 
+    (pp
+     (run-let
+      `((lambda (,(car keys))
+	  ,(car keys)) 
+	(car vals))))))
+
+(define-syntax run-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let ((to-run (cadr exp)))
+       (pp to-run)))))
+
+
+(dict-let '((a 1)) a)
+
+'(a b)
+
 
 (dict->lists '((a 1) (b 2)))
 
@@ -114,3 +130,9 @@
 ;408
 ((dict-let '((d 5) (beans 685)) (+ d beans)))
 ;690
+(define test-value 10)
+(pp test-value)
+
+((dict-let '((h test-value))
+	   h))
+
