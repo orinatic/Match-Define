@@ -1,31 +1,35 @@
 ;;The code for let.  
 
 #|
+(define (dict-let dict body)
+  (let ((vars (map car dict))
+	(vals (map cadr dict)))
+    (pp vars)
+    (pp vals)))
 (define-syntax dict-let
   (sc-macro-transformer
    (lambda (exp env)
+     (pp exp)
      (let ((dict (cadr exp))
 	    (body (caddr exp)))
       ;(pp dict)
-     ; (pp
+      (pp
 	`(let (
 	       ,@(map (lambda(entry)
 ;			     (let ((val 
 ;			      (make-syntactic-closure env '() (cadr entry))))
 			       `(,(car entry) ,(cadr entry)))
 		  dict))
-	   ,body)))));)
+	   ,body))))))
 
 (define d 4)
+(define dictachu '((a d) (b cos) (c 3)))
+(dict-let dictachu (pp `c))
 (dict-let ((a d) (b cos) (c 3)) (+ c a))
 ;7 
 ;Success!!
 |#
-#|(let ((((? x) (? y)) (1 2))
-      (c 4))
-  stuff)
-|#
- 
+
 (define (*run-match* vars pattern)
   ((match:->combinators vars) pattern '() (lambda (d n) d)))
 
@@ -42,7 +46,6 @@
 	     (append done (or (*run-match* vars vals)
 			      (begin (warn 'match-failed-in-let) 
 				     '()))))))))
-
 
 (define-syntax match-let
   (sc-macro-transformer
@@ -69,7 +72,6 @@
 	   d)
 ;-> Warning: match-failed-in-let
 ;5
-
 
 (match-let ((((? y)) ((1 2)))
 	     );(d 5))
@@ -110,15 +112,12 @@
 
 |#
 
-;No match-let* because currently it will be useless
-
-#|
 (define-syntax match-let*
   (sc-macro-transformer
    (lambda (exp env)
      (let* ((body (cddr exp))
 	    (dict (assign-iter (cadr exp) '())))
-       (pp dict)
+;       (pp dict)
        `(let* ( ,@(map (lambda(entry)
 			`(,(car entry) ,(cadr entry)))
 		      dict))
@@ -134,7 +133,6 @@
 (match-let* ((((? y) (? x)) ((1 2)))
 	    (((? c) (? d)) (((+ 3 x) y))))
 	   (+ c d x y)) ;-> 9
-|#
 
 (define-syntax match-letrec
   (sc-macro-transformer
@@ -228,8 +226,71 @@
 					n
 					(even? (- n 1))))))
 				(four? 500)))) 
+
 ;2
 ;Value: #t
 ;Success!
 ;yes, four? and five? are dumb functions, but we can do nested
 ;match-letrecs and it works, which is what we were trying to test!  
+
+(define-syntax match-named-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let* ((name (cadr exp))
+	    (body (cdddr exp))
+	    (dict (assign-iter (caddr exp) '())))
+       `(let ,name ( ,@(map (lambda(entry)
+			`(,(car entry) ,(cadr entry)))
+		      dict))
+	   (begin ,@(map (lambda (statement)
+		    statement)
+		  body)))))))
+
+;;Test cases
+
+;Borrowed from the MIT Scheme documentation
+(match-named-let loop
+     ((numbers '(3 -2 1 6 -5))
+      (nonneg '())
+      (neg '()))
+  (cond ((null? numbers)
+         (list nonneg neg))
+        ((>= (car numbers) 0)
+         (loop (cdr numbers)
+               (cons (car numbers) nonneg)
+               neg))
+        (else
+         (loop (cdr numbers)
+               nonneg
+               (cons (car numbers) neg)))))
+; ((6 1 3) (-5 -2))
+;Success!
+
+(match-named-let godeeper
+      ((cat 'yayyoufinished)
+      (noodles '(1 2 3 4 5 6)))
+     (if (null? noodles)
+	 cat
+	 (godeeper cat (cdr noodles))))
+;yayyoufinished
+;Success!
+
+(define (dict-let*new dict body)
+  (let ((vars (map car dict))
+	(vals (map cadr dict)))
+    (pp vars)
+    (pp vals)))
+(define halloDict '((a 1) (b 2)))
+(dict-let*new halloDict (pp a))
+
+(define-syntax match-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let* ((body (cddr exp))
+	    (dict (assign-iter (cadr exp) '())))
+       `(let ( ,@(map (lambda(entry)
+			`(,(car entry) ,(cadr entry)))
+		      dict))
+	   (begin ,@(map (lambda (statement)
+		    statement)
+		  body)))))))
