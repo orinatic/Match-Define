@@ -2,6 +2,23 @@
 (define (*run-match* vars pattern)
   ((match:->combinators vars) pattern '() (lambda (d n) d)))
 
+;;If we decide to go with the macro system
+;;system, we're contemplating overwriting the actual definitions of
+;;let, let*, define, etc with these match versions (as the match
+;;versions are backwards compatible).  
+;; Our eval-environment system isn't fully backwards-compatible yet
+;; (the expressions in the let statement need to be made into an
+;; alist.  If they're used with a match statement as well, then the
+;; caller needs to append the expressions with the output of the call
+;; to *run-match*, as in 
+;; 
+;;((dict-let (append (*run-match* '((? y) (? x)) '((1 2))) '((d 5)))
+;;	   (+ d x y 400)))
+;;
+
+;;Please see the final report for a full API for the macros and
+;;eval-environment system, along with the API for our repl version.  
+
 ;Our define macro
 (define-syntax match-define
   (sc-macro-transformer
@@ -74,6 +91,7 @@
 		  body))) 
 	   ))))
 
+;The macro for named-let.  
 (define-syntax match-named-let
   (sc-macro-transformer
    (lambda (exp env)
@@ -90,7 +108,7 @@
 ;;;; Our dict-let macro, which attempts to use the environment-eval
 ;;;; trick.  
 ;;;; Does not allow the body to use variables that are defined
-;;;; externally. We're working on it.
+;;;; externally. We're working on a fix for this.  
 (define-syntax dict-let
   (sc-macro-transformer
    (lambda (exp env)
@@ -183,6 +201,7 @@
 ;Warning: match-failed-in-let
 ;Value: 5
 
+;;checking letrec
 (match-letrec ((even?
           (lambda (n)
             (if (zero? n)
@@ -203,6 +222,9 @@
 ;Value: #t
 ;Success!
 
+;checking if letrec works.  We letrec even? and odd? (which call each
+;other) and then letrec four? and five? (which call each other) and
+;then call four? 
 (match-letrec ((even?
           (lambda (n)
             (if (zero? n)
@@ -241,6 +263,7 @@
 ;;;;; Match-named-let testing
 
 ;Borrowed from the MIT Scheme documentation
+;This aims to test if named let actually works
 (match-named-let loop
      ((numbers '(3 -2 1 6 -5))
       (nonneg '())
@@ -258,7 +281,7 @@
 ; ((6 1 3) (-5 -2))
 ;Success!
 
-
+;Another test for named-let
 (match-named-let godeeper
       ((cat 'yayyoufinished)
       (noodles '(1 2 3 4 5 6)))
