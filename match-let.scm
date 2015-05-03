@@ -49,7 +49,7 @@
 	   (pp y)
 	   d)
 ;;*run-match* can be defined to be anything, with the following
-;;restrictoins:
+;;restrictions:
 ;; Must take a list of vars a pattern to match against
 ;; Must return an alist of (var val) if the match succeeds
 ;; Must return false if the match fails

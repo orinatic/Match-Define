@@ -89,18 +89,28 @@
      (let ((dict (cadr exp))
 	   (body (caddr exp)))
        `(lambda ()
-	 (define (empty a) 'nothing)
-	 (let ((our-env (procedure-environment empty)))
-	   (pp (environment-bindings our-env))
-	   (let dict-define-loop ((todo ,dict))
-	     (if (null? todo)
-		 'done
-		 (let ((var (caar todo))
-		       (val (cadar todo)))
-		   (environment-define our-env var val)
-		   (dict-define-loop (cdr todo)))))
-	   (pp (environment-bindings our-env))
-	   (eval ,body our-env)))))))
+	  (define (empty a) 'nothing)
+	  (let ((our-env (procedure-environment empty)))
+	        ; (pp (environment-bindings our-env))
+	    (let dict-define-loop ((todo ,dict))
+	      (if (null? todo)
+		  'done
+		  (let ((var (caar todo))
+			(val (cadar todo)))
+		    (environment-define our-env var val)
+		    (dict-define-loop (cdr todo)))))
+		     ;  (pp (environment-bindings our-env))
+	    (eval ,body our-env)))))))
 
 ((dict-let '((g 5)) g))
+;5
 
+((dict-let '((g 5) (h 1000)) (+ g h)))
+;1005
+(append (*run-match* '((? y) (? x)) '((1 2))) '((d 5)))
+;((x 2) (y 1) (d 5))
+((dict-let (append (*run-match* '((? y) (? x)) '((1 2))) '((d 5)))
+	   (+ d x y 400)))
+;408
+((dict-let '((d 5) (beans 685)) (+ d beans)))
+;690
