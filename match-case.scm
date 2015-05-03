@@ -68,7 +68,39 @@
 (define (dict->vals dict)
 	(map (lambda (elt) (cadr elt)) dict))  
 
+(define (dict-let dict body)
+  (lambda ()
+    (define (empty a) 'nothing)
+    (let ((our-env (procedure-environment empty)))
+      (pp (environment-bindings our-env))
+      (let dict-define-loop ((todo dict))
+	(if (null? todo)
+	    'done
+	    (let ((var (caar todo))
+		  (val (cadar todo)))
+	      (environment-define our-env var val)
+	      (dict-define-loop (cdr todo)))))
+      (pp (environment-bindings our-env))
+      (eval body our-env))))
 
-((lambda (a b) 
-   (pp `(,a ,b)))
- 1 2)
+(define-syntax dict-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let ((dict (cadr exp))
+	   (body (caddr exp)))
+       `(lambda ()
+	 (define (empty a) 'nothing)
+	 (let ((our-env (procedure-environment empty)))
+	   (pp (environment-bindings our-env))
+	   (let dict-define-loop ((todo ,dict))
+	     (if (null? todo)
+		 'done
+		 (let ((var (caar todo))
+		       (val (cadar todo)))
+		   (environment-define our-env var val)
+		   (dict-define-loop (cdr todo)))))
+	   (pp (environment-bindings our-env))
+	   (eval ,body our-env)))))))
+
+((dict-let '((g 5)) g))
+
