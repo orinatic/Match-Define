@@ -1,0 +1,54 @@
+6.945 Final Project: Match Definitions and Cases in MIT Scheme
+
+By Tom Boning, Eli Davis, and Jenny Ramseyer
+
+Project Github: https://github.com/orinatic/Match-Define
+
+Our project aims to implement case matching and match definitions in
+MIT Scheme.  Currently we support match definitions in Scheme.  We aim
+to have pattern matching working by our presentation on Wednesday.  
+
+By match definitions, we mean allowing definitions (and let,
+named-let, let*, and letrec) of the form 
+(define '(a b c) '(1 2 3))
+to set a = 1, b = 2, and c = 3
+
+We also support match statements of the form written in pset 4, where
+we can do 
+(let* ((*run-matcher* '((? x) (? y)) '((1 2)))
+     (c x))
+     body) ;where body is the body of the let* expression
+
+;*run-match* runs the matcher from pset 4.  
+
+Unfortunately, it currently does not work.  We have some known bugs,
+which we plan to ask Professor Sussman and Lars on Monday.  
+
+Our attempt went as follows. We wrote macros for define, let, let*,
+letrec, and named-let which all work correctly.  Define can define
+things at the correct scope level, depending where it is in a
+function, and the lets are all scoped correctly.  The code for these
+macros is in "working-functions.scm" (attached).  These macros work
+fine, given the output of a call to *run-matcher* (an alist), an
+ordinary function statement (ie, the ordinary syntax of a let, let*,
+define, etc), or some combination of the two, along with a body.
+Calls to these functions are identical to a call to the ordinary
+version of the function, except that the function name is different.  
+
+Unfortunately, there's a key bug in these macro definitions.  When we
+ evaluate match in a macro, we don't have access to the
+environment, so we don't catch other existing bindings in the
+environment.  So sometimes our matches fail when they shouldn't.  We
+should ask Professor Sussman about this on Monday.  This may be
+avoidable for let, but will be much trickier (if possible?) for
+define.  Another consequence of that is that we can't do expressions
+ like the following:
+
+(define p '((? a) (? b)))
+
+(match-define p '((4 2)))
+
+
+
+
+
