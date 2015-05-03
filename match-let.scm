@@ -274,23 +274,3 @@
 	 (godeeper cat (cdr noodles))))
 ;yayyoufinished
 ;Success!
-
-(define (dict-let*new dict body)
-  (let ((vars (map car dict))
-	(vals (map cadr dict)))
-    (pp vars)
-    (pp vals)))
-(define halloDict '((a 1) (b 2)))
-(dict-let*new halloDict (pp a))
-
-(define-syntax match-let
-  (sc-macro-transformer
-   (lambda (exp env)
-     (let* ((body (cddr exp))
-	    (dict (assign-iter (cadr exp) '())))
-       `(let ( ,@(map (lambda(entry)
-			`(,(car entry) ,(cadr entry)))
-		      dict))
-	   (begin ,@(map (lambda (statement)
-		    statement)
-		  body)))))))
