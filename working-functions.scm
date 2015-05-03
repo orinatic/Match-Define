@@ -82,6 +82,28 @@
 		    statement)
 		  body)))))))
 
+;;;; Does not allow the body to use variables that are defined
+;;;; externally. We're working on it.
+(define-syntax dict-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let ((dict (cadr exp))
+	   (body (caddr exp)))
+       `(lambda ()
+	  (define (empty a) 'nothing)
+	  (let ((our-env (procedure-environment empty)))
+	        ; (pp (environment-bindings our-env))
+	    (let dict-define-loop ((todo ,dict))
+	      (if (null? todo)
+		  'done
+		  (let ((var (caar todo))
+			(val (cadar todo)))
+		    (environment-define our-env var val)
+		    (dict-define-loop (cdr todo)))))
+		     ;  (pp (environment-bindings our-env))
+	    (eval ,body our-env)))))))
+
+
 
 ;;;; Match-define tests
 (match-define ((? y) (? x)) ((1 2)))
@@ -106,16 +128,14 @@
 (match-let ((((? y)) ((1 2))))
 	   (+ x y))
 ;Warning: match-failed-in-let
-;Unbound variable: y
-;and then an error
+3
 
 (match-let ((((? y)) ((4 2)))
 	     (d 5))
 	   d)
 ;Warning:  match-failed-in-let
 ;5
-;Unbound variable: x
-;and then an error
+;
 
 ;;;;Match-let* tests
 (match-let* ((((? y) (? x)) ((1 2)))
