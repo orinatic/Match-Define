@@ -34,3 +34,18 @@
 (let-dict ((lambda () (list (list 'a 2) (list 'b 3)))) (+ a b))
 
 (define-dict ((lambda () (list (list 'a 3) (list 'b 7)))))
+
+(let-dict ((matcher '((? a) (? b))) '(1 2)) (+ a b))
+
+(define (match-let? exp) (tagged-list? exp 'match-let))
+
+(defhandler eval
+  (lambda (exp env)
+    (let ((pattern (cadr exp))
+	  (input (eval (caddr exp) env))
+	  (body (sequence->begin (cdddr exp))))
+      (eval (let-dict 
+	     ((matcher pattern) input)
+	     body)
+	    env)))
+  match-let?)
