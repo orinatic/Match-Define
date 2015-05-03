@@ -28,7 +28,31 @@
 (dict-let ((a d) (b cos) (c 3)) (+ c a))
 ;7 
 ;Success!!
-|#
+
+(let ((((? x) (? y)) (1 2))
+      (c 4))
+  stuff)
+
+ 
+(match-let ((((? y) (? x)) ((1 2)))
+	     (d 5))
+	   (+ d x y))
+
+(match-let ((((? y)) ((1 2)))
+	     );(d 5))
+	   (+ x y))
+
+(match-let ((((? y)) ((4 2)))
+	     (d 5))
+	   (pp d)
+	   (pp x)
+	   (pp y)
+	   d)
+;;*run-match* can be defined to be anything, with the following
+;;restrictoins:
+;; Must take a list of vars a pattern to match against
+;; Must return an alist of (var val) if the match succeeds
+;; Must return false if the match fails
 
 (define (*run-match* vars pattern)
   ((match:->combinators vars) pattern '() (lambda (d n) d)))
@@ -146,6 +170,7 @@
 		    statement)
 		  body))) 
 	   ))))
+
 
 
 ;;Letrec test cases!
@@ -294,3 +319,4 @@
 	   (begin ,@(map (lambda (statement)
 		    statement)
 		  body)))))))
+

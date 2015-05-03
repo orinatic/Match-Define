@@ -56,12 +56,9 @@
 (define-syntax match-define
   (sc-macro-transformer
    (lambda (exp env)
-     (let* ((match (cadr exp))
+     (let* ((vars (cadr exp))
 	    (vals (caddr exp))
-	    (dict ((match:->combinators match)
-				       vals 
-				       '() 
-				       (lambda (d n) d))))
+	    (dict (*run-match* vars vals)))
        (if dict
 	   ;(pp
 	    `(begin
