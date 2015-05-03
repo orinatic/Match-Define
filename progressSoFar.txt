@@ -48,7 +48,41 @@ define.  Another consequence of that is that we can't do expressions
 
 (match-define p '((4 2)))
 
+Instead of substituting in the value of p that p is defined to be,
+match-define will use the symbol "p".  Our macros can't access things
+that were defined elsewhere in the environment.  Sometimes it works
+out, in the case where when we eval the output of our macro and the
+repl then looks up the value, as in this case:
 
+(define d 4)
+(match-define '((? a) (? b)) '((1 d)))
+will succeed and output a = 1 and b = 4.  But really, what the macro
+has done is set b = d, which when evaluated, the repl later decides is
+b = 4.  But this doesn't work in all cases.  It just happens to work
+here because we need to do anything with b that relies on b = 4, (as
+opposed to b = someFunction) so it silently succeeds.  If we tried to
+do 
+
+(define dict ((a b c) (1 2 3))
+(match-let dict
+  (pp 1))
+it will break (note that it will break because it can't look up the
+value of dict within our match-let macro.  Contrary to appearances, it
+won't break because it's trying to be a named-let, because we have our
+own version of match-named-let which we use instead).  
+
+This is inconvenient, but leads to a larger problem: Case matching
+doesn't work.  In order to case match, we need to be able to calls
+like
+(define foo '(bin-op + 1 2))
+(match-case foo
+    (('binop (? op) (? a) (? b))
+       (eval op a b env))
+    (('binop-debug (? op) (? a) (? b))
+       (pp op a b)))
+
+But match-case will require using our definitions of match-let, which can't
+access the definition of foo, so it all breaks.  
 
 
 

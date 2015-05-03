@@ -88,6 +88,21 @@
 	     (d 5))
 	   (+ d x y)) ;-> 8
 
+(define e '(1 2))
+
+(match-let ((((? y) (? x)) ((e 2)))
+	     (d e))
+	   (car y)) ;-> 1
+
+
+(match-let ((('(1 2) (? x)) ((e 2)))
+	     (d e))
+	   (car x)) 
+;Warning:  match-failed-in-let
+;Unbound variable: x
+;and then it fails
+
+
 (match-let ((((? y) (? x)) ((1 2))))
 	   (+ x y)) ;-> 3
 
