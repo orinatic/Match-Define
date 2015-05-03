@@ -1,6 +1,8 @@
+;;the code that actually runs the matcher
 (define (*run-match* vars pattern)
   ((match:->combinators vars) pattern '() (lambda (d n) d)))
 
+;Our define macro
 (define-syntax match-define
   (sc-macro-transformer
    (lambda (exp env)
@@ -17,6 +19,7 @@
 		      dict))
 	    `(pp 'failed-match))))));)
 
+;A helper assign function
 (define (assign-iter todo done)
   (if (null? todo)
       (filter pair? done)
@@ -30,7 +33,7 @@
 	     (append done (or (*run-match* vars vals)
 			      (begin (warn 'match-failed-in-let) 
 				     '()))))))))
-
+;Our let macro
 (define-syntax match-let
   (sc-macro-transformer
    (lambda (exp env)
@@ -44,6 +47,7 @@
 		  body))) 
 	   ))))
 
+;Our let* macro
 (define-syntax match-let*
   (sc-macro-transformer
    (lambda (exp env)
@@ -56,6 +60,7 @@
 		    statement)
 		  body)))))))
 
+;Our letrec macro
 (define-syntax match-letrec
   (sc-macro-transformer
    (lambda (exp env)
@@ -82,6 +87,8 @@
 		    statement)
 		  body)))))))
 
+;;;; Our dict-let macro, which attempts to use the environment-eval
+;;;; trick.  
 ;;;; Does not allow the body to use variables that are defined
 ;;;; externally. We're working on it.
 (define-syntax dict-let
@@ -92,7 +99,6 @@
        `(lambda ()
 	  (define (empty a) 'nothing)
 	  (let ((our-env (procedure-environment empty)))
-	        ; (pp (environment-bindings our-env))
 	    (let dict-define-loop ((todo ,dict))
 	      (if (null? todo)
 		  'done
@@ -100,7 +106,6 @@
 			(val (cadar todo)))
 		    (environment-define our-env var val)
 		    (dict-define-loop (cdr todo)))))
-		     ;  (pp (environment-bindings our-env))
 	    (eval ,body our-env)))))))
 
 
