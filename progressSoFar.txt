@@ -9,43 +9,43 @@ MIT Scheme.  Currently we support match definitions in Scheme.  We aim
 to have pattern matching working by our presentation on Wednesday.  
 
 By match definitions, we mean allowing definitions (and let,
-named-let, let*, and letrec) of the form 
-(define '(a b c) '(1 2 3))
-to set a = 1, b = 2, and c = 3
+named-let, let*, and letrec) of the form (define '(a b c) '(1 2 3)) to
+set a = 1, b = 2, and c = 3
 
 We also support match statements of the form written in pset 4, where
 we can do 
-(let* ((*run-matcher* '((? x) (? y)) '((1 2)))
+(let* ((*run-match* '((? x) (? y)) '((1 2)))
      (c x))
      body) ;where body is the body of the let* expression
 
-;*run-match* runs the matcher from pset 4.  
+(*run-match* runs the matcher from pset 4).   
 
-Unfortunately, it currently does not work.  We have some known bugs,
-which we plan to ask Professor Sussman and Lars on Monday.  
+Our attempt went as follows. First we rewrote our matcher code from
+pset 4, as we needed a cleaner implementation (we had a bad hack for
+pletrec that required a global hash table, which we got rid of.  See
+matcher.scm for our new implementation).  
 
-Our attempt went as follows. We wrote macros for define, let, let*,
-letrec, and named-let which all work correctly.  Define can define
-things at the correct scope level, depending where it is in a
-function, and the lets are all scoped correctly.  The code for these
-macros is in "working-functions.scm" (attached).  These macros work
-fine, given the output of a call to *run-matcher* (an alist), an
-ordinary function statement (ie, the ordinary syntax of a let, let*,
+We wrote macros for define, let, let*, letrec, and named-let which all
+work semi-correctly.  Define can define things at the correct scope
+level, depending where it is in a function, and the lets are all
+scoped correctly.  The code for these macros is in
+"previous-attempts.scm" (attached).  These macros work fine, given the
+output of a call to *run-match* (an alist), an ordinary function
+statement (ie, the ordinary syntax of a let, let*,
 define, etc), or some combination of the two, along with a body.
 Calls to these functions are identical to a call to the ordinary
 version of the function, except that the function name is different.  
 
 Unfortunately, there's a key bug in these macro definitions.  When we
- evaluate match in a macro, we don't have access to the
-environment, so we don't catch other existing bindings in the
-environment.  So sometimes our matches fail when they shouldn't.  We
-should ask Professor Sussman about this on Monday.  This may be
-avoidable for let, but will be much trickier (if possible?) for
-define.  Another consequence of that is that we can't do expressions
+evaluate match in a macro, we don't have access to the environment, so
+we don't catch other existing bindings in the environment.  So
+sometimes our matches fail when they shouldn't.  We should ask
+Professor Sussman about this on Monday.  This may be avoidable for
+let, but will be much trickier (if possible?) for define.  Another
+consequence of that is that we can't do expressions
  like the following:
 
 (define p '((? a) (? b)))
-
 (match-define p '((4 2)))
 
 Instead of substituting in the value of p that p is defined to be,
@@ -56,6 +56,7 @@ repl then looks up the value, as in this case:
 
 (define d 4)
 (match-define '((? a) (? b)) '((1 d)))
+
 will succeed and output a = 1 and b = 4.  But really, what the macro
 has done is set b = d, which when evaluated, the repl later decides is
 b = 4.  But this doesn't work in all cases.  It just happens to work
@@ -66,6 +67,7 @@ do
 (define dict ((a b c) (1 2 3))
 (match-let dict
   (pp 1))
+
 it will break (note that it will break because it can't look up the
 value of dict within our match-let macro.  Contrary to appearances, it
 won't break because it's trying to be a named-let, because we have our
@@ -74,6 +76,7 @@ own version of match-named-let which we use instead).
 This is inconvenient, but leads to a larger problem: Case matching
 doesn't work.  In order to case match, we need to be able to calls
 like
+
 (define foo '(bin-op + 1 2))
 (match-case foo
     (('binop (? op) (? a) (? b))
@@ -81,8 +84,195 @@ like
     (('binop-debug (? op) (? a) (? b))
        (pp op a b)))
 
-But match-case will require using our definitions of match-let, which can't
-access the definition of foo, so it all breaks.  
+But match-case will require using our definitions of match-let, which
+can't access the definition of foo, so it all breaks.  
+
+After we figured out that macros wouldn't work, we switched to an
+eval/environment strategy. Our first idea was to try to edit the
+environment directly, with something like the following: 
+(define-syntax dict-let                                                                                                                                
+  (sc-macro-transformer                                                                                                                                
+   (lambda (exp env)                                                                                                                                   
+     (let ((dict (cadr exp))                                                                                                                           
+           (body (caddr exp)))                                                                                                                         
+       `(lambda ()                                                                                                                                     
+          (define (empty a) 'nothing)                                                                                                                  
+          (let ((our-env (procedure-environment empty)))                                                                                               
+                ; (pp (environment-bindings our-env))                                                                                                  
+            (let dict-define-loop ((todo ,dict))                                                                                                       
+              (if (null? todo)                                                                                                                         
+                  'done                                                                                                                                
+                  (let ((var (caar todo))                                                                                                              
+                        (val (cadar todo)))                                                                                                            
+                    (environment-define our-env var val)                                                                                               
+                    (dict-define-loop (cdr todo)))))                                                                                                   
+                     ;  (pp (environment-bindings our-env))                                                                                            
+            (eval ,body our-env)))))))  
+
+Unfortunately, we could not figure out environment scoping. We
+originally tried using the top level environment, but any assignments
+to that (predictably) were permanent. The version above creates an
+empty environment. This works as far as perishability goes (the
+bindings don’t hop into the global scope), but as this environment
+doesn’t have any of the bindings outside of the scope of the function,
+it is not all that useful (see the code in previous-attempts.scm). 
+
+We also tried a to create our desired string and then eval it, which
+looked something like this:  
+
+(define (dict-let dict body)                                                                                                                           
+  (let ((keys (dict->keys dict))                                                                                                                       
+        (vals (dict->vals dict)))                                                                                                                      
+    (eval                                                                                                                                                                                                                                                                             
+      `((lambda (,(car keys))                                                                                                                          
+          ,(car keys))                      
+        (car vals))) ??? ...
+(this code wouldn’t work anyway, but it’s a small case that shows the
+  idea)
+This generates the (mostly) correct string, but we have no way to
+  evaluate it. We ran into the same problem as above. Eval takes an
+  environment, and there’s no way that we could find to get the
+  current environment. As far as we can tell, (the-environment) only
+  works at top-level; it can’t be used in the middle of a let
+  statement. There does not appear to be another good way to get the
+  current environment for eval-ing. We could not figure out a good way
+  to get the current environment in an arbitrarily nested scope, so we
+  abandoned that tack.  
+
+We can proceed in any of three possible ways:                                                                                                          
+                                                                                                                                                       
+1.) Figure out how to get macros to dereferenced passed-in
+objects. This is likely impossible.                                                       
+                                                                                                                                                       
+2.) Figure out how to get the correct environment for eval-ing. This
+may be impossible, and still has some other issues.  (We plan to ask
+Professor Sussman if he knows how to do this on Monday).                              
+                                                                                                                                                       
+3.) Run this in a sub-interpreter. This is likely the correct choice,
+as we can then eval to our heart’s content.  In fact, we have had some
+success doing so!
+                                                                                                             
+We decided to create a sub-interpreter.  Our sub-interpreter code is
+in the github in the sub-interpreter directory.  It’s largely based
+off of the pset 5 interpreter.  
+
+MATCHER SYNTAX
+
+(Similar to pset 5)
+
+(literal-value) will match that literal value
+ex: 2 will match 2
+
+(? x) will match a single value or a function
+ex: (? x) will match ‘(1), but not ‘(1 2)
+ex: (? x) will match ‘(cos) 
+ex: ‘((? x)) (? y)) will match ‘((1 2)), with x = 1 and y = 2
+
+(?? x) will match an arbitrary number of values or expressions
+ex: (?? x) will match ‘(1 2 3 4) or ‘((cos 4) (sin z))
+ex: (?? x) will match an empty list
+ex: (j (?? x) k (?? y) j (?? x) z) will match 
+(j b b b k c c c j b b b z) or (j b b b k b b b j b b b z) or (j k j
+z) (or many other things)
+
+(match-query match-query match-query) works and will match a list of
+these match-queries, allowing us to chain queries together.
+ex: ((? x) (?:choice 2 (? y)) (? z)) will match ‘(1 2 3)
+
+(?:choice pattern pattern ...) will match any of the patterns passed
+into choice
+ex: (?:choice x y) will match ‘(x) or will match ‘(y)
+ex: (?:choice x (? y)) will match ‘(z) with y = z or will match ‘((k))
+with y = ‘(k)
+
+(? var ,pred?) will match var to something that satisfies the
+predicate
+ex: (? x ,string?) will match x to anything that is a string
+ex: (? y ,symbol?) will match y to anything that is a symbol
+Note that we cannot use ,pred? with ??
+
+(?:ref query-name) allows us to make a reference to some other query
+which has already been defined. It is only used in ?:pletrec (see
+below) 
+
+(?:pletrec ((query-name query)
+	   		 (other-query-name other-query)
+			 		    (...))) allows us to
+	   		 recursively define queries in terms of each
+	   		 other.  
+ex:
+	   		 (?:pletrec ((simple-case (?:choice * (1
+	   		 (?:ref simple-case)))))                                                                                                                                                 
+           (?:ref simple-case)) will match '((1 *)) '() or 
+                                                                                                                        
+API
+
+special form dict-let dict expression expression …
+
+	dict is a single symbol, which must be bound to a list of the
+	form ((var1 val1) (var2 val2) …)
+	A dict-let binds val1 to var1, val2 to var2 … and then
+	evaluates the expressions, in order, returning the final
+	expression
+	(define dict ‘((a 1) (b 3)))
+	(dict-let dict (+ a b)) ;-> 4
+
+	(define dict ‘((x (1 4)) (y 6)))
+	(dict-let dict (car (cons y x))) ;-> 6
+
+special form dict-define dict
+	dict is a single symbol, which must be bound to a list of the
+	form ((var1 val1) (var2 val2) …)
+	A dict-define binds val1 to var1, val2 to var2. It is only
+	usable in places where a normal define is usable. 
+
+	(define dict ‘((a 1) (b 2)))
+	(dict-define dict)
+	a ;-> 1
+	b ;-> 2
+
+special-form match-let query pattern expression expression …
+	     query is a query which follows 6.945-matcher-syntax,
+	     described earlier in this document. 
+	     pattern is a list which query will be matched against.
+
+	     query will be matched against pattern. If there is a
+	     match, the each matched variable will have its matched
+	     value bound to it, and the expressions will be evaluated,
+	     returning the last expression. If there is no match, the
+	     entire thing will return #f
+
+	     (match-let `((? x) (?? xs)) ‘(1 2 3 4 5) 
+	     		(pp x)
+			    (pp xs)
+			    	#t))
+				; 1
+				; (2 3 4 5)
+				#t
+
+procedure match-case key clause clause ...
+	  each clause has the form (query expression expression …)
+	  Each query is a query which follows 6.945-matcher-syntax,
+	  described earlier in this document. 
+	  
+	  Each clause will be processed one-by-one, from top to
+	  bottom. If the key matches a clause’s query, the clause’s
+	  expressions will be executed sequentially, and the last one
+	  will be returned. If there is an else clause, it will be
+	  selected in the default case. If there is no else clause,
+	  and no clause matches, undefined behavior will result. 
+
+(define (eval-expr exp)
+		   (match-case exp
+				((‘bin-op (? op) (? a1) (? a2)) (op a1
+		   a2))
+				((‘un-op (? op) (? a)) (op a))
+					    (else ‘invalid-expr)))
+					    (eval-expr ‘(bin-op + 5
+		   9)) ;-> 14
+		   (eval-expr ‘(un-op sqrt 9)) ;-> 3
+		   (eval-expr ‘(lalalalala)) ;-> ‘invalid-expr
+
 
 
 
