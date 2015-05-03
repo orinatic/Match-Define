@@ -13,8 +13,8 @@
                             ; rewriter
 
 (load "utils")
-(load "rule-implementation")
-(load "rules")
+;(load "rule-implementation")
+;(load "rules")
 
 (load "pattern-operator")
 

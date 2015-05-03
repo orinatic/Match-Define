@@ -320,7 +320,3 @@
                  names)))
           (else names))))
 |#
-#|
- (match:pattern-names '((? a) (?? b)))
- ;Value: (b a)
-|#

@@ -151,7 +151,7 @@
 (match-let ((((? y)) ((1 2))))
 	   (+ x y))
 ;Warning: match-failed-in-let
-3
+;3
 
 (match-let ((((? y)) ((4 2)))
 	     (d 5))
