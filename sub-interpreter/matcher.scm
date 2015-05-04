@@ -117,7 +117,7 @@
 
 (define (match:segment? pattern)
   (and (pair? pattern)
-       (eq? (car pattern) '??)))
+      (eq? (car pattern) '??)))
 
 (define (match:variable-name pattern pattern-env) (cadr pattern))
 (define (match:restrictions pattern pattern-env) (cddr pattern))
