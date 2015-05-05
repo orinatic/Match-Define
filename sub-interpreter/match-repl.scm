@@ -147,4 +147,33 @@ match-define?)
 (quote ((2 3 4 5)))
 (quote 1)
 (quote a)
+
+;;;Testing multi-line body 
+
+(init)
+(let ((vars '(seq (? x) (?? xs)))
+      (vals '(seq 1 2 3 4 5)))
+ (match-let vars vals (begin (cons x xs) (pp 'herewego) 
+			     (pp 'lotsoflines)
+			     (pp x) (pp xs))))
+;herewego
+;lotsoflines
+;1
+;(2 3 4 5)
+;#!unspecific
+;works fine with a begin statement.  But can it work without the
+;begin?!?!
+
+(init)
+(let ((vars '(seq (? x) (?? xs)))
+      (vals '(seq 1 2 3 4 5)))
+ (match-let vars vals (pp (cons x xs)) (pp 'herewego) (pp x) (pp xs)))
+
+;(1 2 3 4 5)
+;herewego
+;1
+;(2 3 4 5)
+;#!unspecific
+;Yes we can!  Awesome.
+
 |#
