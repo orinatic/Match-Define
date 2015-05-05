@@ -37,21 +37,6 @@
        dict)))
   define-dict?)
 
-(init)
-(define d '((a 2) (b 3)))
-(define l '(q w e r t y))
-
-(let-dict d (+ a b))
-(let-dict '((a 2) (b 3)) (+ a b))
-(let-dict ((lambda () '((a 2) (b 3)))) (+ a b))
-(let-dict '((x l) (xs (2 3 4 5))) (begin (pp x) (pp xs)))
-
-
-(define-dict ((lambda () '((a 3) (b 7)))))
-(define-dict '((c 4) (g (1 2))))
-
-(let-dict ((matcher '((? a) (? b))) '(1 2)) (+ a b))
-
 (define (match-let? exp) (tagged-list? exp 'match-let))
 (define (match-define? exp) (tagged-list? exp 'match-define))
 
@@ -65,12 +50,6 @@
 	  (eval (let-dict dict body) env)
 	  'match-failed)))
   match-let?)
-
-(init)
-(match-let '((? a) (? b)) '(1 2) (+ a b))
-(let ((vars '(seq (? x) (?? xs)))
-      (vals '(seq 1 2 3 4 5)))
- (match-let vars vals (cons x xs)))
 
 (defhandler eval
   (lambda (exp env)
@@ -97,7 +76,6 @@ match-define?)
 
 (define (match-case? exp) (tagged-list? exp 'match-case))
 
-
 (defhandler eval
   (lambda (exp env)
     (define token (eval (cadr exp) env))
@@ -111,6 +89,32 @@ match-define?)
 	 ((null? (cdr todo)) 'no-match-found)
 	 (else (case-iter (cdr todo)))))))
   match-case?)
+
+;;;; Testing 
+#|
+(init)
+(define d '((a 2) (b 3)))
+(define l '(q w e r t y))
+
+(let-dict d (+ a b))
+(let-dict '((a 2) (b 3)) (+ a b))
+(let-dict ((lambda () '((a 2) (b 3)))) (+ a b))
+(let-dict '((x l) (xs (2 3 4 5))) (begin (pp x) (pp xs)))
+
+
+(define-dict ((lambda () '((a 3) (b 7)))))
+(define-dict '((c 4) (g (1 2))))
+
+(let-dict ((matcher '((? a) (? b))) '(1 2)) (+ a b))
+
+
+(init)
+(match-let '((? a) (? b)) '(1 2) (+ a b))
+(let ((vars '(seq (? x) (?? xs)))
+      (vals '(seq 1 2 3 4 5)))
+ (match-let vars vals (cons x xs)))
+#|
+#|
 
 (init)
 (let ((vars '(seq (? x) (?? xs)))
@@ -135,3 +139,4 @@ match-define?)
 (quote ((2 3 4 5)))
 (quote 1)
 (quote a)
+|#
