@@ -9,12 +9,12 @@
 ;;(define (letrec-dict? exp) (tagged-list exp 'letrec-dict))
 
 
-
 (define (let-dict dict body)
   (let ((names (map car dict))
 	(values (map (lambda (elt)
+		       (pp (cadr elt))
 		       (if (list? (cadr elt))
-			   (cons 'list (cadr elt))
+			   (cons 'quote (list (cadr elt)))
 			   (cadr elt)))
 		     dict)))
     (cons (list 'LAMBDA names body) values)))
@@ -90,9 +90,13 @@ match-define?)
 
 (init)
 (match-define '(? x) 1)
+(match-define '((? x) (?? xs)) '(1 2 3 4 5))
+(define m (list cos sin))
+(match-define '(?? xs) (list m '2 '3 '4))
 (match-define '((? x) ((? y) (? z))) '(p (-3 4)))
 
 (define (match-case? exp) (tagged-list? exp 'match-case))
+
 
 (defhandler eval
   (lambda (exp env)
@@ -102,52 +106,32 @@ match-define?)
 	     (pred (car clause))
 	     (body (cadr clause))
 	     (match ((matcher pred) token)))
-	(pp "-0-0-0-")
-	(pp clause)
-	(pp pred)
-	(pp match)
-	(pp "-----")
 	(cond 
 	 (match (eval (let-dict match body) env))
 	 ((null? (cdr todo)) 'no-match-found)
 	 (else (case-iter (cdr todo)))))))
   match-case?)
+
 (init)
+(let ((vars '(seq (? x) (?? xs)))
+      (vals '(seq 1 2 3 4 5)))
+ (match-let vars vals (cons x xs)))
 (define (parse-token token)
   (match-case token
 	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
 	      ((un-op (? op) (? a)) (op a))
-	      ((?? a) (pp 'hello))))
+	      ((?? a) (pp a))))
 
 (parse-token '(bin-op + 1 3))
 (parse-token '(un-op - 4))
+(parse-token '(+ 1 2))
 (parse-token '(goto 0x3453))
+(parse-token '(2 3 4 5))
 
-(define (match-case-test key clauses)
-  (define (case-iter todo)
-    (let ((clause (car todo))
-	   (pred (caar todo))
-	   (body (cadar todo))
-	   (match ((matcher (caar todo)) key)))
-      (pp "-0-0-0-")
-      (pp match)
-      (pp body)
-      (pp "-----")
-      (cond 
-       (match (let-dict match body))
-       ((null? (cdr todo)) 'no-match-found)
-       (else (case-iter (cdr todo))))))
-  (case-iter clauses))
+;;;; Segment Variable Testing
 
-(define (parse-token token)
-  (match-case-test token
-	      '(((bin-op (? op) (? a1) (? a2)) (op a1 a2))
-		((un-op (? op) (? a)) (op a))
-		((?? a) (pp a)))))
-
-(parse-token '(bin-op + 1 3))
-(let-dict '((a2 3) (a1 1) (op +)) '(op a1 a2))
-(parse-token '(un-op - 4))
-(parse-token '(goto 0x3453))
-
-(match-case-test '(1) '(((? a) (+ a 3))))
+((matcher '((? x) (?? a))) '(1 2 3 4 5))
+((matcher '(?? a)) '(2 3 4 5))
+(quote ((2 3 4 5)))
+(quote 1)
+(quote a)
