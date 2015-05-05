@@ -1,0 +1,34 @@
+Outline:
+
+Our project:
+    Implement case matching and pattern matching definitions
+    Currently works for lets and define.  
+
+Failed attempts:
+       Macros
+       Nope, didn't work.  Problems were that could only access the
+       code in the macro, couldn't see/access things that
+       were outside the macro (couldn't take car of things, etc)
+       Environment problems
+           1) Generate the string and eval it (needed access
+       to env, didn't have it)
+       	   2) directly writing definitions to the environment (again,
+       needed access to the environment).
+       Because of compiler optimizations, scheme only lets you get the
+       top level environment.  Our approach required us to get the
+       current environment (and the parent), which you can't do.  
+       REPL
+       We wrote our own repl.  It worked pretty well, except that it
+       didn't know how to handle quasi-quote, so we couldn't do
+       predicates (if you remember from pset 4, our matcher would
+       allow conditions of the form: `(? x ,number?) where we require
+       the match to x to be a number.  Our repl couldn't do
+       quasi-quotes, so we couldn't do this.
+Successful attempt:
+	   At this point, you may be saying: well, the quasi-quote
+       problem shouldn't be that hard, why didn't you just fix it?
+       And we could have, but a) that looked hard, and b) we had
+       another idea of how to do case matching in the actual scheme
+       repl, not our own one, so we went back to the original scheme
+       repl.  
+Fill in more on the last attempt once we actually finish it.  
