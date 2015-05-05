@@ -86,28 +86,33 @@
 			  body))))))))
 (match-let '(5 6) '((? a) (? d))
 	      (+ a d))
+;11
 
 (match-let '(1 2 3 4) '((? a) (? b) (? c) 4)
 	      (match-let '(5 6) '((? a) (? d))
 			       (+ a b c d)))
+;16
 
 (let ((token '(bin-arith + 2 4)))
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
 	          (pp (list op a1 a2))))
 
+;(+ 2 4) ;Unspecified return value
+
 ;Match-let testing
 
 (match-let '(1 2) '((? a) (? b)) (+ a b)) 
-
+;3
 
 (let ((vals '(seq 1 2 3 4 5)))
  (match-let vals '(seq (? x) (?? xs)) (cons x xs)))
-
-
+;(1 2 3 4 5)
 
 (let ((vals '(seq 1 2 3 4 5)))
  (match-let vals '(seq (? x) (?? xs)) (pp `(,x and ,xs have been set))
 	    (cons x xs)))
+; (1 and (2 3 4 5) have been set)
+;Value 20: (1 2 3 4 5)
 
 
 ;;;Match-case testing

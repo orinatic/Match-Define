@@ -18,3 +18,24 @@
 
 (load "pattern-operator")
 
+
+(set! user-initial-environment (make-top-level-environment))
+(environment-define user-initial-environment 
+                    'generic-evaluation-environment
+                    (extend-top-level-environment user-initial-environment))
+(define generic-evaluation-environment 
+  (access generic-evaluation-environment user-initial-environment))
+
+(load "previous-attempts/sub-interpreter/utils" user-initial-environment)
+(load "previous-attempts/sub-interpreter/ghelper" user-initial-environment)
+(load "previous-attempts/sub-interpreter/matcher" user-initial-environment)
+(load "previous-attempts/sub-interpreter/syntax" user-initial-environment)
+(load "previous-attempts/sub-interpreter/rtdata" user-initial-environment)
+
+(load "previous-attempts/sub-interpreter/interp" generic-evaluation-environment)
+(load "previous-attempts/sub-interpreter/repl" generic-evaluation-environment)
+;;; This allows nonstrict definitions.
+;;(load "general-procedures" generic-evaluation-environment)
+;;(load "kons" generic-evaluation-environment)
+
+(ge generic-evaluation-environment)
