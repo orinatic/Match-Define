@@ -74,46 +74,62 @@ match-define?)
 
 ;;;; Testing 
 #|
+
+;;;Let-dict and define-dict testing
+
 (init)
 (define d '((a 2) (b 3)))
 (define l '(q w e r t y))
 
-(let-dict d (+ a b))
-(let-dict '((a 2) (b 3)) (+ a b))
-(let-dict ((lambda () '((a 2) (b 3)))) (+ a b))
+(let-dict d (+ a b)) ;5
+(let-dict '((a 2) (b 3)) (+ a b)) ;5
+(let-dict ((lambda () '((a 2) (b 3)))) (+ a b)) ;5
 (let-dict '((x l) (xs (2 3 4 5))) (begin (pp x) (pp xs)))
+;(q w e r t y)
+;(2 3 4 5)
+;#!unspecific
 
 
 (define-dict ((lambda () '((a 3) (b 7)))))
 (define-dict '((c 4) (g (1 2))))
 
-(let-dict ((matcher '((? a) (? b))) '(1 2)) (+ a b))
+(let-dict ((matcher '((? a) (? b))) '(1 2)) (+ a b)) ;3
 
+;Match-let testing
 
 (init)
-(match-let '((? a) (? b)) '(1 2) (+ a b))
+(match-let '((? a) (? b)) '(1 2) (+ a b)) ;3
 (let ((vars '(seq (? x) (?? xs)))
       (vals '(seq 1 2 3 4 5)))
  (match-let vars vals (cons x xs)))
-#|
-#|
+;(1 2 3 4 5)
+
 
 (init)
 (let ((vars '(seq (? x) (?? xs)))
       (vals '(seq 1 2 3 4 5)))
  (match-let vars vals (cons x xs)))
+;(1 2 3 4 5)
+
+;;;Match-case testing
+
 (define (parse-token token)
   (match-case token
 	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
 	      ((un-op (? op) (? a)) (op a))
 	      ((?? a) (pp a))))
 
-(parse-token '(bin-op + 1 3))
-(parse-token '(un-op - 4))
-(parse-token '(+ 1 2))
+(parse-token '(bin-op + 1 3)) ;4
+(parse-token '(un-op - 4)) ; -4
+(parse-token '(+ 1 2)) ;((+ 1 2)) #!unspecific
 (parse-token '(goto 0x3453))
+;((goto 0x3453))
+;#!unspecific
 (parse-token '(2 3 4 5))
+;((2 3 4 5))
+;#!unspecific
 
+;;;Match-define testing
 
 (init)
 (match-define '(? x) 1)
@@ -122,12 +138,12 @@ match-define?)
 (match-define '(?? xs) (list m '2 '3 '4))
 (match-define '((? x) ((? y) (? z))) '(p (-3 4)))
 
-
-
 ;;;; Segment Variable Testing
 
 ((matcher '((? x) (?? a))) '(1 2 3 4 5))
+;((a (2 3 4 5)) (x 1))
 ((matcher '(?? a)) '(2 3 4 5))
+;((a ((2 3 4 5))))
 (quote ((2 3 4 5)))
 (quote 1)
 (quote a)
