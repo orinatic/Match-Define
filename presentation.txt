@@ -9,11 +9,55 @@ Failed attempts:
        Nope, didn't work.  Problems were that could only access the
        code in the macro, couldn't see/access things that
        were outside the macro (couldn't take car of things, etc)
+
+This was a shame, as we had match-define, match-named-let,
+match-letrec, match-let, and match-let* all mostly working, except
+when we wanted to use things that were outside the macro (where it
+failed)
+
+(define-syntax match-let
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let* ((body (cddr exp))
+	    (dict (assign-iter (cadr exp) '())))
+       `(let ( ,@(map (lambda(entry)
+			`(,(car entry) ,(cadr entry)))
+		      dict))
+	   (begin ,@(map (lambda (statement)
+		    statement)
+		  body))) 
+	   ))))
+
+
+(match-let ((((? y) (? x)) ((1 2)))
+	     (d 5))
+	   (+ d x y)) 
+
+sample-output from match-let
+(let ((x 2) (y 1) (d 5))
+  (begin (+ d x y)))
+And it output 8 if you removed the call to print.  It even worked with
+multi-line body in the print call.  
+But the problem was, it actually mutated the code to be evaluated.  So
+if something were defined outside of the macro, it broke, because the
+macro couldn't manipulate it.  
+ex:
+
+(define failList '((1 2) 3))
+(match-letrec ((((? y) (? x)) (car failList)))
+	   (+ x y)) 
+We get the error "Unbound variable: y" because we can't match (even
+though y should match 1 and x should match 2, we can't because the
+macro can't lookup what failList actually is.  
+
        Environment problems
            1) Generate the string and eval it (needed access
        to env, didn't have it)
        	   2) directly writing definitions to the environment (again,
        needed access to the environment).
+       We tried numerous hacks to try to get the environment,
+           including
+ making our own and trying to pass it around, but it didn't work. 
        Because of compiler optimizations, scheme only lets you get the
        top level environment.  Our approach required us to get the
        current environment (and the parent), which you can't do.  
@@ -23,7 +67,32 @@ Failed attempts:
        predicates (if you remember from pset 4, our matcher would
        allow conditions of the form: `(? x ,number?) where we require
        the match to x to be a number.  Our repl couldn't do
-       quasi-quotes, so we couldn't do this.
+       quasi-quotes, so we couldn't do this.  It did, however, allow
+           us to solve our previous environment definition problems,
+           and otherwise worked quite well.  If we wanted to drop
+           predicate functionality, it would have been fine.  
+
+ex:
+
+(define (parse-token token)
+  (match-case token
+	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
+	      ((un-op (? op) (? a)) (op a))
+	      ((?? a) (pp a))))
+
+(parse-token '(bin-op + 1 3)) ;4
+(parse-token '(un-op - 4)) ; -4
+(parse-token '(+ 1 2)) ;((+ 1 2)) #!unspecific
+(parse-token '(goto 0x3453))
+;((goto 0x3453))
+;#!unspecific
+(parse-token '(2 3 4 5))
+;((2 3 4 5))
+;#!unspecific
+
+But if we try to add in predicates, we got the error: 
+";Variable reference to a syntactic keyword: quasiquote"
+
 Successful attempt:
 	   At this point, you may be saying: well, the quasi-quote
        problem shouldn't be that hard, why didn't you just fix it?

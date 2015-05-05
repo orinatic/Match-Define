@@ -76,6 +76,7 @@
    (lambda (exp env)
      (let* ((body (cddr exp))
 	    (dict (assign-iter (cadr exp) '())))
+;       (pp
        `(let ( ,@(map (lambda(entry)
 			`(,(car entry) ,(cadr entry)))
 		      dict))
