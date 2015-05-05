@@ -1,8 +1,5 @@
 (define *d* '((*empty* 0)))
 
-(match-let key '((? a) (? b))
-	   (+ a b))
-
 (define (remove-duplicates l)
   (cond ((null? l)
          '())

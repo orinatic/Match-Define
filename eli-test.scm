@@ -1,7 +1,4 @@
-(define *dictionary* '((*empty* 0)))
-
-(match-let key '((? a) (? b))
-	   (+ a b))
+(define *d* '((*empty* 0)))
 
 (define (remove-duplicates l)
   (cond ((null? l)
@@ -33,8 +30,13 @@
       (let ((token (car todo)))
 	(cond 
 	 ((memq token vars) 
-	  (process-body (cdr todo) (cons `(ref *d* ',token) done) vars))
-	 ((pair? token)
+	  (process-body (cdr todo) 
+			(cons `(match:lookup *d* ',token) done) 
+			vars))
+	 ((boolean/and (pair? token) 
+		       (not (match:element? token))
+		       (not (match:segment? token))
+		       (not (match:lookup? token)))
 	  (process-body (cdr todo) 
 			(cons (process-body token '() vars) done) 
 			vars))
@@ -49,9 +51,11 @@
 	      '()
 	      '(a b c d))
 
-(define (ref dict symbol)
+(define (match:lookup dict symbol)
   (cadr (assq symbol dict)))
 
+(define (match:lookup? exp)
+  (tagged-list? exp 'match:lookup))
 
 (define-syntax match-let
   (sc-macro-transformer
@@ -60,13 +64,36 @@
 	   (pattern (caddr exp))
 	   (vars (find-variables pattern '()))
 	   (body (process-body (cdddr exp) '() vars)))
-       `(let ((*d* (append ((matcher ,pattern) ,key) *d*)))
-	  (begin ,@(map (lambda (statement) statement)
-			body)))))))
+       `(begin
+	  (fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
+	    (begin ,@(map (lambda (statement) statement)
+			  body))))))))
+
+(match-let '(5 6 7 8) '((? a) (?? d))
+	   (cons a d))
 
 (match-let '(1 2 3 4) '((? a) (? b) (? c) 4)
-	   (+ a b c))
-      
-(let ((token '(bin-arith + 2 4)))
+	   (match-let '(5 6) '((? a) (? d))
+		      (+ a b c d)))
+
+(let ((token `(bin-arith ,+ 2 4)))
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
-	     (pp (list op a1 a2))))
+	     (pp (op a1 a2))))
+
+(define (parse-token token)
+  (match-case token
+	      ((bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
+	       (op a1 a2))
+	      ((un-arith (? op) (? a, number?)) (op a))
+	      ((?? a) (pp a))))
+
+(define-syntax match-case
+  (sc-macro-transformer
+   (lambda (exp env)
+     (let ((key (close-syntax (cadr exp) env))
+	   (clauses (cddr env)))
+       
+
+
+
+
