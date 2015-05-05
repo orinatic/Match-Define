@@ -1,8 +1,8 @@
-(define *dictionary* '((*empty* 0)))
+;;Our final nice version
 
-(match-let key '((? a) (? b))
-	   (+ a b))
+(define *d* '())
 
+;;removes duplicates out of a list
 (define (remove-duplicates l)
   (cond ((null? l)
          '())
@@ -11,6 +11,7 @@
         (else
          (cons (car l) (remove-duplicates (cdr l))))))
 
+;;given a match statement, it pulls variables out of the match statement
 (define (find-variables todo vars)
   (if (null? todo)
       (remove-duplicates vars)
@@ -26,7 +27,11 @@
 	  (else (find-variables (cdr todo) vars))))))
 
 (find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))) '())
+;(d c b a)
 
+;;This puts in the calls to ref as required.  
+;;Replaces the variables in vars in the code with the calls to ref
+;;that look up their values in the dictionary.  
 (define (process-body todo done vars)
   (if (null? todo)
       (reverse done)
@@ -48,11 +53,15 @@
 		(pp a))
 	      '()
 	      '(a b c d))
+; ((- (+ (ref *d* (quote c)) (ref *d* (quote d))) 2 (* (ref *d* (quote a)) (ref *d* (quote c))) (sqrt (* f (ref *d* (quote b))))) (pp (ref *d* (quote a))))
 
+;;gets the value of symbol from the dictionary
 (define (ref dict symbol)
   (cadr (assq symbol dict)))
 
-
+;;match-let is a macro which "lets" the variables matched in the match
+;;statement be the values that they match for the duration of the let
+;;statement.  
 (define-syntax match-let
   (sc-macro-transformer
    (lambda (exp env)
@@ -66,7 +75,10 @@
 
 (match-let '(1 2 3 4) '((? a) (? b) (? c) 4)
 	   (+ a b c))
-      
+;6
+
 (let ((token '(bin-arith + 2 4)))
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
 	     (pp (list op a1 a2))))
+;(+ 2 4) 
+
