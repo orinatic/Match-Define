@@ -82,3 +82,119 @@
 	     (pp (list op a1 a2))))
 ;(+ 2 4) 
 
+;Match-let testing
+
+(match-let '(1 2) '((? a) (? b)) (+ a b)) 
+;3
+
+(let ((vals '(seq 1 2 3 4 5)))
+ (match-let vals '(seq (? x) (?? xs)) (cons x xs)))
+;(1 2 3 4 5)
+
+
+(let ((vals '(seq 1 2 3 4 5)))
+ (match-let vals '(seq (? x) (?? xs)) (pp `(,x and ,xs have been set))
+	    (cons x xs)))
+;(1 and (2 3 4 5) have been set)
+;Value 27: (1 2 3 4 5)
+
+;;;Match-case testing
+
+(define (parse-token token)
+  (match-case token
+	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
+	      ((un-op (? op) (? a)) (op a))
+	      ((?? a) (pp a) (pp "no match"))))
+
+(parse-token '(bin-op + 1 3))
+(parse-token '(un-op - 4))
+(parse-token '(+ 1 2))
+(parse-token '(goto 0x3453))
+(parse-token '(2 3 4 5))
+
+;;;Match-define testing
+
+(match-define '(? x) 1)
+(match-define '((? x) (?? xs)) '(1 2 3 4 5))
+(match-define '(?? xs) (list (list cos sin) '2 '3 '4))
+(match-define '((? x) ((? y) (? z))) '(p (-3 4)))
+
+;;;; Segment Variable Testing
+
+((matcher '((? x) (?? a))) '(1 2 3 4 5))
+;((a (2 3 4 5)) (x 1))
+((matcher '(?? a)) '(2 3 4 5))
+;((a ((2 3 4 5))))
+(quote ((2 3 4 5)))
+;((2 3 4 5))
+(quote 1)
+;1
+(quote a)
+;a
+
+;;;Testing multi-line body 
+
+(let ((vals '(seq 1 2 3 4 5)))
+ (match-let vals '(seq (? x) (?? xs)) (begin (cons x xs) (pp 'herewego) 
+			     (pp 'lotsoflines)
+			     (pp x) (pp xs))))
+;herewego
+;lotsoflines
+;1
+;(2 3 4 5)
+;;Unspecified return value
+
+
+(let ((vals '(seq 1 2 3 4 5)))
+ (match-let vals '(seq (? x) (?? xs)) (pp (cons x xs)) (pp 'herewego) (pp x) (pp xs)))
+;(1 2 3 4 5)
+;herewego
+;1
+;(2 3 4 5)
+;;Unspecified return value
+;;Yay!   Works without the begin statement.  
+
+;;;Testing predicates
+
+((matcher '(a ((? b) 2 3) (? b) c))
+ '(a (1 2 3) 1 c))
+;((b 1))
+
+((matcher '((? b)))
+ '(4))
+;((b 4))
+
+((matcher `((? b ,number?)))
+ '(4))
+;((b 4))
+
+
+(define (parse-token token)
+  (match-case token
+	      ((bool-lit `(? a ,boolean?)) (pp a))
+	      ((stringy `(? a ,string?)) (pp a))
+	      ((?? a) (pp a) (pp 'extra))))
+
+(parse-token '(goto 0x3453))
+(parse-token '(bool-lit #t))
+(parse-token '(stringy "Macros are hard"))
+
+;;Very simple demo
+
+(define (parse-token token)
+  (match-case token
+	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
+	      ((un-op (? op) (? a)) (op a))
+	      ((bool (? val ,boolean?)) val)
+	      ((stringy (? a ,string?)) (pp a))
+	      ((num (? a ,number?)) (pp `(number is ,a)))
+	      ((?? a) (pp a))))
+
+
+(parse-token '(goto 0x3453))
+(parse-token '(bool #t))
+(parse-token '(stringy "Macros are hard"))
+(parse-token '(bin-op (+ 4 5)))
+(parse-token '(un-op (- 4)))
+(parse-token '(num 4))
+
