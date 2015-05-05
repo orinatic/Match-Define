@@ -178,7 +178,6 @@ match-define?)
 
 ;;;Testing predicates
 
-
 ((matcher '(a ((? b) 2 3) (? b) c))
  '(a (1 2 3) 1 c))
 ;Value: ((b 1))
@@ -197,7 +196,6 @@ match-define?)
  '(4))
 ;Value: ((b 4))
 
-
 (define (parse-token token)
   (match-case token
 	      ((bool-lit `(? a ,boolean?)) (pp a))
@@ -208,13 +206,24 @@ match-define?)
 (parse-token '(bool-lit #t))
 (parse-token '(stringy "Macros are hard"))
 
-;;Creating an interesting demo (maybe?)
+;;Creating an interesting demo (maybe? okay it's not that exciting)
 
 (define (parse-token token)
   (match-case token
 	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
 	      ((un-op (? op) (? a)) (op a))
-	      
+	      ((bool (? val ,boolean?)) val)
+	      ((stringy (? a ,string?)) (pp a))
+	      ((num (? a ,number?)) (pp `(number is ,a)))
 	      ((?? a) (pp a))))
+
+
+(parse-token '(goto 0x3453))
+(parse-token '(bool #t))
+(parse-token '(stringy "Macros are hard"))
+(parse-token '(bin-op (+ 4 5)))
+(parse-token '(un-op (- 4)))
+(parse-token '(num 4))
+
 
 |#
