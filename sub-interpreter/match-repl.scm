@@ -187,16 +187,21 @@ match-define?)
  '(4))
 ;Value: ((b 4))
 
-((matcher '((? b ,number?)))
+;out of repl
+((matcher `((? b ,number?)))
+ '(4))
+;Value: ((b 4))
+
+;in repl
+((matcher `((? b ,number?)))
  '(4))
 ;Value: ((b 4))
 
 
-
 (define (parse-token token)
   (match-case token
-	      ((bool-lit (? a boolean?)) (pp a))
-	      ((stringy (? a string?)) (pp a))
+	      ((bool-lit `(? a ,boolean?)) (pp a))
+	      ((stringy `(? a ,string?)) (pp a))
 	      ((?? a) (pp a) (pp 'extra))))
 
 (parse-token '(goto 0x3453))
