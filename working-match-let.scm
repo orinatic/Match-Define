@@ -1,5 +1,6 @@
 ;;Our final nice version
 
+;The dictionary of bindings
 (define *d* '())
 
 ;;removes duplicates out of a list
@@ -38,8 +39,13 @@
       (let ((token (car todo)))
 	(cond 
 	 ((memq token vars) 
-	  (process-body (cdr todo) (cons `(ref *d* ',token) done) vars))
-	 ((pair? token)
+	  (process-body (cdr todo) 
+			(cons `(match:lookup *d* ',token) done) 
+			vars))
+	 ((boolean/and (pair? token) 
+		       (not (match:element? token))
+		       (not (match:segment? token))
+		       (not (match:lookup? token)))
 	  (process-body (cdr todo) 
 			(cons (process-body token '() vars) done) 
 			vars))
@@ -55,9 +61,14 @@
 	      '(a b c d))
 ; ((- (+ (ref *d* (quote c)) (ref *d* (quote d))) 2 (* (ref *d* (quote a)) (ref *d* (quote c))) (sqrt (* f (ref *d* (quote b))))) (pp (ref *d* (quote a))))
 
+
 ;;gets the value of symbol from the dictionary
-(define (ref dict symbol)
+(define (match:lookup dict symbol)
   (cadr (assq symbol dict)))
+
+;predicate for match_lookup
+(define (match:lookup? exp)
+  (tagged-list? exp 'match:lookup))
 
 ;;match-let is a macro which "lets" the variables matched in the match
 ;;statement be the values that they match for the duration of the let
@@ -69,34 +80,35 @@
 	   (pattern (caddr exp))
 	   (vars (find-variables pattern '()))
 	   (body (process-body (cdddr exp) '() vars)))
-       `(let ((*d* (append ((matcher ,pattern) ,key) *d*)))
-	  (begin ,@(map (lambda (statement) statement)
-			body)))))))
+       `(begin
+	  (fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
+	    (begin ,@(map (lambda (statement) statement)
+			  body))))))))
+(match-let '(5 6) '((? a) (? d))
+	      (+ a d))
 
 (match-let '(1 2 3 4) '((? a) (? b) (? c) 4)
-	   (+ a b c))
-;6
+	      (match-let '(5 6) '((? a) (? d))
+			       (+ a b c d)))
 
 (let ((token '(bin-arith + 2 4)))
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
-	     (pp (list op a1 a2))))
-;(+ 2 4) 
+	          (pp (list op a1 a2))))
 
 ;Match-let testing
 
 (match-let '(1 2) '((? a) (? b)) (+ a b)) 
-;3
+
 
 (let ((vals '(seq 1 2 3 4 5)))
  (match-let vals '(seq (? x) (?? xs)) (cons x xs)))
-;(1 2 3 4 5)
+
 
 
 (let ((vals '(seq 1 2 3 4 5)))
  (match-let vals '(seq (? x) (?? xs)) (pp `(,x and ,xs have been set))
 	    (cons x xs)))
-;(1 and (2 3 4 5) have been set)
-;Value 27: (1 2 3 4 5)
+
 
 ;;;Match-case testing
 
