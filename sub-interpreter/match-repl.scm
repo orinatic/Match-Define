@@ -12,7 +12,6 @@
 (define (let-dict dict body)
   (let ((names (map car dict))
 	(values (map (lambda (elt)
-		       (pp (cadr elt))
 		       (if (list? (cadr elt))
 			   (cons 'quote (list (cadr elt)))
 			   (cadr elt)))
@@ -53,12 +52,9 @@
 
 (defhandler eval
   (lambda (exp env)
-    (pp (cadr exp))
-    (pp (caddr exp))
     (let* ((pattern (eval (cadr exp) env))
 	   (input (eval (caddr exp) env))
 	   (dict ((matcher pattern) input)))
-      (pp dict)
       (if dict 
 	  (for-each 
 	   (lambda (elt)
