@@ -176,4 +176,40 @@ match-define?)
 ;#!unspecific
 ;Yes we can!  Awesome.
 
+;;;Testing predicates
+
+
+((matcher '(a ((? b) 2 3) (? b) c))
+ '(a (1 2 3) 1 c))
+;Value: ((b 1))
+
+((matcher '((? b)))
+ '(4))
+;Value: ((b 4))
+
+((matcher '((? b ,number?)))
+ '(4))
+;Value: ((b 4))
+
+
+
+(define (parse-token token)
+  (match-case token
+	      ((bool-lit (? a boolean?)) (pp a))
+	      ((stringy (? a string?)) (pp a))
+	      ((?? a) (pp a) (pp 'extra))))
+
+(parse-token '(goto 0x3453))
+(parse-token '(bool-lit #t))
+(parse-token '(stringy "Macros are hard"))
+
+;;Creating an interesting demo (maybe?)
+
+(define (parse-token token)
+  (match-case token
+	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
+	      ((un-op (? op) (? a)) (op a))
+	      
+	      ((?? a) (pp a))))
+
 |#
