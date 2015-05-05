@@ -1,13 +1,11 @@
 ;;; Dict evaluating repl test
-
-(load "~/Documents/6.945/Match-Define/eli-load.scm")
-(load "load")
+;(load "load")
 
 (define (let-dict? exp) (tagged-list? exp 'let-dict))
 (define (define-dict? exp) (tagged-list? exp 'define-dict))
-;;(define (let-dict*? exp) (tagged-list exp 'let-dict*))
-;;(define (letrec-dict? exp) (tagged-list exp 'letrec-dict))
-
+(define (match-let? exp) (tagged-list? exp 'match-let))
+(define (match-define? exp) (tagged-list? exp 'match-define))
+(define (match-case? exp) (tagged-list? exp 'match-case))
 
 (define (let-dict dict body)
   (let ((names (map car dict))
@@ -37,9 +35,6 @@
        dict)))
   define-dict?)
 
-(define (match-let? exp) (tagged-list? exp 'match-let))
-(define (match-define? exp) (tagged-list? exp 'match-define))
-
 (defhandler eval
   (lambda (exp env)
     (let* ((pattern (eval (cadr exp) env))
@@ -66,15 +61,6 @@
 	   dict)
     'match-failed)))
 match-define?)
-
-(init)
-(match-define '(? x) 1)
-(match-define '((? x) (?? xs)) '(1 2 3 4 5))
-(define m (list cos sin))
-(match-define '(?? xs) (list m '2 '3 '4))
-(match-define '((? x) ((? y) (? z))) '(p (-3 4)))
-
-(define (match-case? exp) (tagged-list? exp 'match-case))
 
 (defhandler eval
   (lambda (exp env)
@@ -131,6 +117,16 @@ match-define?)
 (parse-token '(+ 1 2))
 (parse-token '(goto 0x3453))
 (parse-token '(2 3 4 5))
+
+
+(init)
+(match-define '(? x) 1)
+(match-define '((? x) (?? xs)) '(1 2 3 4 5))
+(define m (list cos sin))
+(match-define '(?? xs) (list m '2 '3 '4))
+(match-define '((? x) ((? y) (? z))) '(p (-3 4)))
+
+
 
 ;;;; Segment Variable Testing
 
