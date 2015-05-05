@@ -82,10 +82,15 @@
 
 (define (parse-token token)
   (match-case token
-	      ((bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
+	      ('(bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
 	       (op a1 a2))
-	      ((un-arith (? op) (? a, number?)) (op a))
-	      ((?? a) (pp a))))
+	      ('(un-arith (? op) (? a, number?)) (op a))
+	      ('(?? a) (pp a))))
+
+(define (handle-clause pattern raw-body)
+ (let* ((vars (find-variables pattern '()))
+	(body (process-body raw-body) '() vars))
+   
 
 (define-syntax match-case
   (sc-macro-transformer
