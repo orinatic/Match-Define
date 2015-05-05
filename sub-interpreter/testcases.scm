@@ -20,7 +20,7 @@
   (match-case token
 	      ((bin-op (? op) (? a1) (? a2)) (op a1 a2))
 	      ((un-op (? op) (? a)) (op a))
-	      ((?? a) (pp a))))
+	      ((?? a) (pp a) (pp "no match"))))
 
 (parse-token '(bin-op + 1 3))
 (parse-token '(un-op - 4))
@@ -68,6 +68,10 @@
 
 ((matcher `((? b ,number?)))
  '(4))
+
+(matcher `((?? b ,number?)))
+;This should break, because segments can't take predicates. Or at
+;least, it shouldn't match anything.  
 
 (define (parse-token token)
   (match-case token
