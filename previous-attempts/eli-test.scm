@@ -105,15 +105,15 @@
      (let ((key (close-syntax (cadr exp) env))
 	   (clauses (process-clauses (cddr exp) '())))
        (pp
-       `(let case-iter ((todo ,clauses))
+       `(let case-iter ((todo ',clauses))
 	  (let* ((clause (car todo))
 		 (pattern (car clause))
 		 (body (cadr clause))
-		 (match (matcher ,pattern) ,key))
+		 (match (matcher pattern) ,key))
 	    (if match
 		(fluid-let ((*d* (append match *d*)))
 		  body)
-		(case-iter (cdr clauses))))))))))
+		(case-iter (cdr todo))))))))))
 
 (define (parse-token token)
   (match-case token
@@ -121,3 +121,16 @@
 	       (op a1 a2))
 	      ('(un-arith (? op) (? a, number?)) (op a))
 	      ('(?? a) (pp a))))
+(match-case '(1 2 3)
+	    ('(2 3 (? a)) (+ 2 3 a))
+	    ('(1 2 3) (+ 1 2 3)))
+
+;(let case-iter
+;     ((todo
+;       '(('(2 3 (? a)) ((lambda (a) (+ 2 3 a)) (match:lookup *d* 'a)))
+;         ('(1 2 3) ((lambda () (+ 1 2 3)))))))
+(let ((clause (car todo))
+      (pattern (car clause))
+      (body (cadr clause))
+      (match (matcher pattern) '(1 2 3)))
+  'pass)
