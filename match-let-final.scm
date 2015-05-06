@@ -78,6 +78,13 @@
 ;Value 20: (1 2 3 4 5)
 
 
+(let ((vals '(1 2 3 4 5)))
+ (match-let vals `((? x ,number?) (?? xs)) (pp `(x is ,x and xs
+						   is ,xs)) (cons x
+								  xs)))
+; (x is 1 and xs is (2 3 4 5))
+;Value 124: (1 2 3 4 5)
+
 ;;;Testing multi-line body 
 
 (let ((vals '(seq 1 2 3 4 5)))
