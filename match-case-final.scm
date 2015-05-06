@@ -11,3 +11,10 @@
 		      (match-let ,key ,pattern ,body))))
 		clauses)
 	 (else 'no-match))))))
+
+
+(match-case '(3 100 buffalos beefalo)
+            (`(harold (? a) (? b ,number?) (?? c)) 
+	     (pp `(harold is ,a ,b ,c)))
+            (((?:choice a (? c)) 100 (?:choice buffalos buffaloes) 
+	      (?? b))(pp b))) 
