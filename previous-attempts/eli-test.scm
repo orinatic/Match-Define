@@ -93,14 +93,18 @@
      (let* ((key (close-syntax (cadr exp) env))
 	    (clauses (cddr exp)))
        `(cond 
-	  ,@(map (lambda (clause)
-		    (let ((pattern (car clause))
-			  (body (cadr clause)))
-		      `(((matcher ,pattern) ,key) 
-			(match-let ,key ,pattern ,body))))
-		  clauses))))))
+	 ,@(map (lambda (clause)
+		  (let ((pattern (car clause))
+			(body (cadr clause)))
+		    `(((matcher ,pattern) ,key) 
+		      (match-let ,key ,pattern ,body))))
+		clauses)
+	 (else 'no-match))))))
 
 (match-case '(1 2 3)
+	    (`(2 3 (? a ,number?)) (+ 2 3 a))
+	    (`(1 2 3) (+ 1 2 3)))
+(match-case 'fooboo
 	    (`(2 3 (? a ,number?)) (+ 2 3 a))
 	    (`(1 2 3) (+ 1 2 3)))
 
