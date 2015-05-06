@@ -38,15 +38,16 @@
 	    (pattern (caddr exp))
 	    (vars (find-variables pattern '()))
 	    (body (cdddr exp)))
-       `(if ((matcher ,pattern) ,key)
-	    (fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
-	      ((lambda ,vars
-		 ,@(map (lambda (statement) 
-			  (make-syntactic-closure env vars statement))
-			body)) 
-	       ,@(map (lambda (var) 
-			`(match:lookup *d* ',var)) vars)))
-	    'match-failed)))))
+       `(let ((*result* ((matcher ,pattern) ,key)))
+	  (if *result*
+	      (fluid-let ((*d* (append *result* *d*)))
+		((lambda ,vars
+		   ,@(map (lambda (statement) 
+			    (make-syntactic-closure env vars statement))
+			  body)) 
+		 ,@(map (lambda (var) 
+			  `(match:lookup *d* ',var)) vars)))
+	      'no-match))))))
 ;Match-let testing
 
 (match-let '(5 6) '((? a) (? d))
