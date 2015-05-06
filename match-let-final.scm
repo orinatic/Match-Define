@@ -170,3 +170,4 @@
 			(b-a-etc (?:choice () ((?? b) (?:ref a-b-etc)))))
 		       (?:ref a-b-etc))
 	   `((a ,a) (b ,b)))
+;((a (1)) (b (2)))
