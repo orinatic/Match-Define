@@ -84,6 +84,9 @@
 	  (fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
 	    (begin ,@(map (lambda (statement) statement)
 			  body))))))))
+
+;Match-let testing
+
 (match-let '(5 6) '((? a) (? d))
 	      (+ a d))
 ;11
@@ -98,8 +101,6 @@
 	          (pp (list op a1 a2))))
 
 ;(+ 2 4) ;Unspecified return value
-
-;Match-let testing
 
 (match-let '(1 2) '((? a) (? b)) (+ a b)) 
 ;3
@@ -128,13 +129,6 @@
 (parse-token '(+ 1 2))
 (parse-token '(goto 0x3453))
 (parse-token '(2 3 4 5))
-
-;;;Match-define testing
-
-(match-define '(? x) 1)
-(match-define '((? x) (?? xs)) '(1 2 3 4 5))
-(match-define '(?? xs) (list (list cos sin) '2 '3 '4))
-(match-define '((? x) ((? y) (? z))) '(p (-3 4)))
 
 ;;;; Segment Variable Testing
 

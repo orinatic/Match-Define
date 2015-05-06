@@ -2,7 +2,7 @@ Outline:
 
 Our project:
     Implement case matching and pattern matching definitions
-    Currently works for lets and define.  
+    Success!
 
 Failed attempts:
        Macros
@@ -101,3 +101,6 @@ Successful attempt:
        repl, not our own one, so we went back to the original scheme
        repl.  
 Fill in more on the last attempt once we actually finish it.  
+Match-let works.  Top-level match-define works.  For non-top-level
+	   match-defines, just use match-let (they're functionally the
+	   same thing anyway).  
