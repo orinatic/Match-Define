@@ -8,22 +8,24 @@
         (else
          (cons (car l) (remove-duplicates (cdr l))))))
 
-(define (find-variables todo vars)
-  (if (null? todo)
-      (remove-duplicates vars)
-      (let ((token (car todo)))
-	(cond 
-	 ((match:element? token) 
-	  (find-variables (cdr todo) (cons (cadr token) vars)))
-	 ((match:segment? token) 
-	  (find-variables (cdr todo) (cons (cadr token) vars)))
-	 ((pair? token) 
-	  (find-variables (cdr todo) 
-			  (find-variables token vars)))
-	  (else (find-variables (cdr todo) vars))))))
+(define (find-variables input)
+  (let find-iter ((todo (list input)) (vars '()))
+    (if (null? todo)
+	(remove-duplicates vars)
+	(let ((token (car todo)))
+	  (cond 
+	   ((match:element? token) 
+	    (find-iter (cdr todo) (cons (cadr token) vars)))
+	   ((match:segment? token) 
+	    (find-iter (cdr todo) (cons (cadr token) vars)))
+	   ((pair? token) 
+	    (find-iter (cdr todo) 
+			    (find-iter token vars)))
+	   (else (find-iter (cdr todo) vars)))))))
 
-(find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))) '()) 
-; (d c b a)
+(find-variables '(?? a))
+(find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))))
+
 
 (define (match:lookup dict symbol)
   (cadr (assq symbol dict)))
@@ -36,7 +38,7 @@
    (lambda (exp env)
      (let* ((key (close-syntax (cadr exp) env))
 	    (pattern (caddr exp))
-	    (vars (find-variables pattern '()))
+	    (vars (find-variables pattern))
 	    (body (cdddr exp)))
        `(let ((*result* ((matcher ,pattern) ,key)))
 	  (if *result*
