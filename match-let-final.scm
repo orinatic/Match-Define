@@ -136,7 +136,6 @@
  (match-let vals `((? x ,number?) (?? xs ,number?)) (cons x xs)))
 ;(1 2 3 4 #t)
 
-
 (let ((vals '(1 #t 3 4 5)))
  (match-let vals `((? x ,boolean?) (?? xs)) (cons x xs)))
 ;errors, because match failed.  
