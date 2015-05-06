@@ -3,7 +3,7 @@
 ; Pattern matcher:
 
 (load "ghelper")
-(load "matcher")
+;(load "matcher")
 
 
 ; Term rewriting / pattern-directed invocation system:

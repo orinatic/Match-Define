@@ -213,9 +213,9 @@
     (let* ((name (car assoc))
 	   (comp-pattern (match:->combinator (cadr assoc)
 					     pattern-env)))
-      (pp (list 'comp-pattern comp-pattern))
+     ; (pp (list 'comp-pattern comp-pattern))
       (hash-table/put! (cadr pattern-env) name comp-pattern)))
-  (pp (list 'match:pletrec defs pattern-env))
+ ; (pp (list 'match:pletrec defs pattern-env))
   (for-each make-pletrec-def defs))
 
 (defhandler match:->combinator
