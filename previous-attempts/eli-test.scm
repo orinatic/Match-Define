@@ -24,33 +24,6 @@
 
 (find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))) '())
 
-(define (process-body todo done vars)
-  (if (null? todo)
-      (reverse done)
-      (let ((token (car todo)))
-	(cond 
-	 ((memq token vars) 
-	  (process-body (cdr todo) 
-			(cons `(match:lookup *d* ',token) done) 
-			vars))
-	 ((boolean/and (pair? token) 
-		       (not (match:element? token))
-		       (not (match:segment? token))
-		       (not (match:lookup? token)))
-	  (process-body (cdr todo) 
-			(cons (process-body token '() vars) done) 
-			vars))
-	 (else 
-	  (process-body (cdr todo) (cons token done) vars))))))
-
-(process-body '((- (+ c d)  
-		   2 
-		   (* a c) 
-		   (sqrt (* f b))) 
-		(pp a))
-	      '()
-	      '(a b c d))
-
 (define (match:lookup dict symbol)
   (cadr (assq symbol dict)))
 
@@ -61,20 +34,28 @@
   (sc-macro-transformer
    (lambda (exp env)
      (let* ((key (close-syntax (cadr exp) env))
-	   (pattern (caddr exp))
-	   (vars (find-variables pattern '()))
-	   (body (process-body (cdddr exp) '() vars)))
-       `(begin
-	  (fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
-	    (begin ,@(map (lambda (statement) statement)
-			  body))))))))
+	    (pattern (caddr exp))
+	    (vars (find-variables pattern '()))
+	    (body (cdddr exp)))
+       `(fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
+	  ((lambda ,vars
+	     ,@(map (lambda (statement) 
+		      (make-syntactic-closure env vars statement))
+		    body)) 
+	   ,@(map (lambda (var) 
+		    `(match:lookup *d* ',var)) vars))))))))
 
 (match-let '(5 6 7 8) '((? a) (?? d))
 	   (cons a d))
 
 (match-let '(1 2 3 4) '((? a) (? b) (? c) 4)
 	   (match-let '(5 6) '((? a) (? d))
+		      (pp b)
 		      (+ a b c d)))
+
+((lambda (a b)
+   ((lambda (c d)
+      (+ a b c d)) 1 2)) 3 4)
 
 (let ((token `(bin-arith ,+ 2 4)))
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
@@ -87,18 +68,39 @@
 	      ('(un-arith (? op) (? a, number?)) (op a))
 	      ('(?? a) (pp a))))
 
-(define (handle-clause pattern raw-body)
- (let* ((vars (find-variables pattern '()))
-	(body (process-body raw-body) '() vars))
-   
+(define (process-clauses todo done)
+  (if (null? todo)
+      (reverse done)
+      (let ((pattern (caar todo))
+	    (body (cadar todo)))
+	(process-clauses 
+	 (cdr todo) 
+	 (cons (cons pattern 
+		     (process-body body 
+		     '() 
+		     (find-variables pattern '())))
+	       done)))))   
+
+(process-clauses
+ '(((bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
+   (op a1 a2))
+  ((un-arith (? op) (? a, number?)) (op a))
+  ((?? a) (pp a)))
+ '())
 
 (define-syntax match-case
   (sc-macro-transformer
    (lambda (exp env)
      (let ((key (close-syntax (cadr exp) env))
 	   (clauses (cddr env)))
+
+
+       `(let case-iter ((todo ,clauses))
+	  (let* ((clause (car todo))
+		 (pattern (car clause))
+		 (body (,@handle-clause-body (cadr clause)))
        
 
-
+)))))))
 
 
