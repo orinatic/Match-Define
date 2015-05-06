@@ -154,3 +154,19 @@
 
 ((matcher `((? x ,boolean?) (?? xs))) '(1 #t 3 4 5))
 ;#f
+
+
+;; test match-pletrec
+(define (succeed-fn d n) `(succeed ,d)))
+(define a-b-swap
+  (matcher
+   '(?:pletrec ((a-b-etc (?:choice () ((?? a) (?:ref b-a-etc))))
+		(b-a-etc (?:choice () ((?? b) (?:ref a-b-etc)))))
+	       (?:ref a-b-etc))))
+(a-b-swap '(1 (2 (1 ())))) ;-> (b (2)) (a (1))
+
+(match-let '(1 (2 (1 ()))) 
+	   '(?:pletrec ((a-b-etc (?:choice () ((?? a) (?:ref b-a-etc))))
+			(b-a-etc (?:choice () ((?? b) (?:ref a-b-etc)))))
+		       (?:ref a-b-etc))
+	   `((a ,a) (b ,b)))
