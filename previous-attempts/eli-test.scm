@@ -8,21 +8,23 @@
         (else
          (cons (car l) (remove-duplicates (cdr l))))))
 
-(define (find-variables todo vars)
-  (if (null? todo)
-      (remove-duplicates vars)
-      (let ((token (car todo)))
-	(cond 
-	 ((match:element? token) 
-	  (find-variables (cdr todo) (cons (cadr token) vars)))
-	 ((match:segment? token) 
-	  (find-variables (cdr todo) (cons (cadr token) vars)))
-	 ((pair? token) 
-	  (find-variables (cdr todo) 
-			  (find-variables token vars)))
-	  (else (find-variables (cdr todo) vars))))))
+(define (find-variables input)
+  (let find-iter ((todo (list input)) (vars '()))
+    (if (null? todo)
+	(remove-duplicates vars)
+	(let ((token (car todo)))
+	  (cond 
+	   ((match:element? token) 
+	    (find-iter (cdr todo) (cons (cadr token) vars)))
+	   ((match:segment? token) 
+	    (find-iter (cdr todo) (cons (cadr token) vars)))
+	   ((pair? token) 
+	    (find-iter (cdr todo) 
+			    (find-iter token vars)))
+	   (else (find-iter (cdr todo) vars)))))))
 
-(find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))) '())
+(find-variables '(?? a))
+(find-variables `((? a) ((?? b) (? a ,string?) ((? c) (? d)))))
 
 (define (match:lookup dict symbol)
   (cadr (assq symbol dict)))
@@ -35,7 +37,7 @@
    (lambda (exp env)
      (let* ((key (close-syntax (cadr exp) env))
 	    (pattern (caddr exp))
-	    (vars (find-variables pattern '()))
+	    (vars (find-variables pattern))
 	    (body (cdddr exp)))
        `(fluid-let ((*d* (append ((matcher ,pattern) ,key) *d*)))
 	  ((lambda ,vars
@@ -52,7 +54,6 @@
 	   (match-let '(5 6) '((? a) (? d))
 		      (pp b)
 		      (+ a b c d)))
-
 ((lambda (a b)
    ((lambda (c d)
       (+ a b c d)) 1 2)) 3 4)
@@ -61,25 +62,22 @@
   (match-let token `(bin-arith (? op) (? a1 ,number?) (? a2 ,number?))
 	     (pp (op a1 a2))))
 
-(define (parse-token token)
-  (match-case token
-	      ('(bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
-	       (op a1 a2))
-	      ('(un-arith (? op) (? a, number?)) (op a))
-	      ('(?? a) (pp a))))
-
 (define (process-clauses todo done)
   (if (null? todo)
       (reverse done)
-      (let ((pattern (caar todo))
-	    (body (cadar todo)))
+      (let* ((pattern (caar todo))
+	     (body (cadar todo))
+	     (vars (find-variables pattern)))
+	(pp pattern)
 	(process-clauses 
 	 (cdr todo) 
 	 (cons (cons pattern 
-		     (process-body body 
-		     '() 
-		     (find-variables pattern '())))
+		     `( ( (lambda ,vars ,body) 
+			  ,@(map (lambda (var)
+				   `(match:lookup *d* ',var))
+				 vars))))
 	       done)))))   
+
 
 (process-clauses
  '(((bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
@@ -88,19 +86,38 @@
   ((?? a) (pp a)))
  '())
 
+(((bin-arith (? op) (? a1 (unquote number?)) (? a2 (unquote number?))) 
+  ((lambda (a2 a1 op) (op a1 a2)) 
+   (match:lookup *d* (quote a2)) 
+   (match:lookup *d* (quote a1)) 
+   (match:lookup *d* (quote op)))) 
+ ((un-arith (? op) (? a (unquote number?))) 
+  ((lambda (a op) (op a)) 
+   (match:lookup *d* (quote a)) 
+   (match:lookup *d* (quote op)))) 
+ ((?? a) 
+  ((lambda (a) (pp a)) 
+   (match:lookup *d* (quote a)))))
+
 (define-syntax match-case
   (sc-macro-transformer
    (lambda (exp env)
      (let ((key (close-syntax (cadr exp) env))
-	   (clauses (cddr env)))
-
-
+	   (clauses (process-clauses (cddr exp) '())))
+       (pp
        `(let case-iter ((todo ,clauses))
 	  (let* ((clause (car todo))
 		 (pattern (car clause))
-		 (body (,@handle-clause-body (cadr clause)))
-       
+		 (body (cadr clause))
+		 (match (matcher ,pattern) ,key))
+	    (if match
+		(fluid-let ((*d* (append match *d*)))
+		  body)
+		(case-iter (cdr clauses))))))))))
 
-)))))))
-
-
+(define (parse-token token)
+  (match-case token
+	      ('(bin-arith (? op) (? a1 ,number?) (? a2 ,number?)) 
+	       (op a1 a2))
+	      ('(un-arith (? op) (? a, number?)) (op a))
+	      ('(?? a) (pp a))))
