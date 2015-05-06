@@ -9,4 +9,5 @@
 			(body (cadr clause)))
 		    `(((matcher ,pattern) ,key) 
 		      (match-let ,key ,pattern ,body))))
-		clauses))))))
+		clauses)
+	 (else 'no-match))))))
