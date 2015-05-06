@@ -38,7 +38,7 @@
 	    (pattern (caddr exp))
 	    (vars (find-variables pattern '()))
 	    (body (cdddr exp)))
-       `(let ((*result* ((matcher ,pattern) ,key)))
+       (pp `(let ((*result* ((matcher ,pattern) ,key)))
 	  (if *result*
 	      (fluid-let ((*d* (append *result* *d*)))
 		((lambda ,vars
@@ -47,7 +47,7 @@
 			  body)) 
 		 ,@(map (lambda (var) 
 			  `(match:lookup *d* ',var)) vars)))
-	      'no-match))))))
+	      'no-match)))))))
 ;Match-let testing
 
 (match-let '(5 6) '((? a) (? d))
